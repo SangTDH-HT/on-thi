@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#26301F">
+<title>Ôn thi</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="mo_khoa.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ôn thi">
+</head>
+<body class="cho-mo">
+<div id="nen" aria-hidden="true"></div>
+
+<!-- Bảng màu kim loại dùng chung cho huy hiệu -->
+<svg class="kho-hinh" aria-hidden="true" focusable="false" width="0" height="0">
+  <defs>
+    <radialGradient id="g-vang" cx="34%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#FFF3C4"/><stop offset=".28" stop-color="#F2CF73"/>
+      <stop offset=".6" stop-color="#D9AA3D"/><stop offset=".86" stop-color="#9C7320"/><stop offset="1" stop-color="#6E4F12"/>
+    </radialGradient>
+    <radialGradient id="g-kim" cx="34%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#B9BF9C"/><stop offset=".35" stop-color="#859070"/>
+      <stop offset=".75" stop-color="#58633F"/><stop offset="1" stop-color="#394228"/>
+    </radialGradient>
+    <radialGradient id="g-men-do" cx="40%" cy="34%" r="72%">
+      <stop offset="0" stop-color="#F0444C"/><stop offset=".55" stop-color="#C8102E"/><stop offset="1" stop-color="#7A0A1C"/>
+    </radialGradient>
+    <radialGradient id="g-men-reu" cx="40%" cy="34%" r="72%">
+      <stop offset="0" stop-color="#46553A"/><stop offset="1" stop-color="#232C1B"/>
+    </radialGradient>
+    <!-- Triết học: men xanh lam, kim loại ánh thép xanh -->
+    <radialGradient id="g-men-lam" cx="40%" cy="34%" r="72%">
+      <stop offset="0" stop-color="#5A93EC"/><stop offset=".55" stop-color="#2156B4"/><stop offset="1" stop-color="#0F2A66"/>
+    </radialGradient>
+    <radialGradient id="g-men-muc" cx="40%" cy="34%" r="72%">
+      <stop offset="0" stop-color="#3D4866"/><stop offset="1" stop-color="#1B2133"/>
+    </radialGradient>
+    <radialGradient id="g-kim-lam" cx="34%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#BCC3D6"/><stop offset=".35" stop-color="#848DA8"/>
+      <stop offset=".75" stop-color="#535C78"/><stop offset="1" stop-color="#343B52"/>
+    </radialGradient>
+    <linearGradient id="g-sao-sang" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFF6D2"/><stop offset="1" stop-color="#F2C95E"/>
+    </linearGradient>
+    <linearGradient id="g-sao-toi" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D9AA3D"/><stop offset="1" stop-color="#8A6418"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<section id="man-chinh" class="man" aria-label="Trang chính">
+  <div class="cuon" id="cuon-chinh">
+    <div class="thanh-chinh">
+      <button class="nut-menu" id="nut-menu" aria-label="Mở menu chọn cỡ đề" aria-expanded="false" aria-controls="menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>
+      </button>
+      <div class="chon-mon" id="chon-mon" role="tablist" aria-label="Chọn môn" data-chon="qp">
+        <i class="con-truot" aria-hidden="true"></i>
+        <button role="tab" id="tab-qp" data-mon="qp" aria-selected="true" aria-controls="noi-dung">GDQP&amp;AN</button>
+        <button role="tab" id="tab-tr" data-mon="tr" aria-selected="false" aria-controls="noi-dung" tabindex="-1">Triết học</button>
+      </div>
+    </div>
+    <div id="noi-dung" role="tabpanel" aria-labelledby="tab-qp">
+      <header class="dau-trang">
+        <div class="huy-lon" id="huy-lon"></div>
+        <div class="dau-chu">
+          <h1 class="ten-app" id="ten-app">Ôn thi GDQP&amp;AN</h1>
+          <p class="thuoc" id="thuoc"></p>
+        </div>
+      </header>
+      <h2 class="nhan-muc" id="nhan-thi">Thi thử</h2>
+      <p class="chu-thich" id="chu-thich-thi"></p>
+      <div class="luoi-de" id="luoi-de"></div>
+      <div id="muc-bo" hidden>
+        <h2 class="nhan-muc">Bộ ôn tập của cô</h2>
+        <p class="chu-thich">Đề thi thật 50 câu có 17 câu lấy từ 100 câu cô phát. Ba câu trùng nhau đã gộp, còn 97 câu.</p>
+        <ul class="ds-bai gon" id="ds-bo"></ul>
+      </div>
+      <h2 class="nhan-muc" id="nhan-bai">Học theo bài</h2>
+      <p class="chu-thich">Chọn xong biết đúng sai ngay, kèm từ khóa và mẹo nhớ.</p>
+      <ol class="ds-bai" id="ds-bai"></ol>
+    </div>
+  </div>
+</section>
+
+<section id="man-lam" class="man" aria-label="Làm bài" hidden>
+  <header class="thanh-tren">
+    <button class="nut-ve" id="nut-ve" aria-label="Về trang chính">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="tieu-de"><b id="lam-bai"></b><span id="lam-ten"></span></div>
+    <div class="dem" id="lam-dem"></div>
+  </header>
+  <div class="tien-do" id="tien-do" aria-hidden="true"></div>
+  <main class="cuon" id="cuon">
+    <div class="san" id="san"></div>
+    <div id="cho-meo"></div>
+  </main>
+  <footer class="thanh-duoi" id="thanh-duoi">
+    <button class="nut-chinh" id="nut-tiep">Câu tiếp</button>
+    <div class="dieu-huong" id="dieu-huong">
+      <button class="nut-phu nut-mui" id="thi-truoc" aria-label="Câu trước">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button class="nut-phu" id="thi-phieu"></button>
+      <button class="nut-phu nut-mui" id="thi-sau" aria-label="Câu sau">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </footer>
+</section>
+
+<section id="man-ket" class="man" aria-label="Kết quả" hidden>
+  <main class="cuon ket" id="ket"></main>
+</section>
+
+<!-- Menu: chọn số câu mỗi đề thi thử -->
+<div class="lop-menu" id="menu" hidden>
+  <nav class="ngan-menu" role="dialog" aria-modal="true" aria-labelledby="menu-tieu-de" tabindex="-1">
+    <div class="dau-menu">
+      <h2 id="menu-tieu-de">Tùy chọn</h2>
+      <button class="nut-dong" id="menu-dong" aria-label="Đóng menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+      </button>
+    </div>
+    <h3 class="muc-menu" id="menu-co">Số câu mỗi đề thi thử</h3>
+    <p class="chu-thich-menu" id="menu-chu-thich"></p>
+    <div class="ds-co" id="ds-co" role="radiogroup" aria-label="Số câu mỗi đề"></div>
+    <h3 class="muc-menu">Âm thanh</h3>
+    <div class="dong-am">
+      <p><b>Tiếng đúng, sai và kèn</b><small>Gạt iPhone sang im lặng thì app cũng im.</small></p>
+      <button class="cong-tac" id="nut-am" role="switch" aria-checked="true" aria-label="Âm thanh đúng, sai và kèn"><i></i></button>
+    </div>
+  </nav>
+</div>
+
+<!-- Phiếu trả lời của bài thi thử -->
+<div class="lop-phu" id="phieu" hidden>
+  <div class="tam-hoi tam-phieu" role="dialog" aria-modal="true" aria-labelledby="phieu-tieu-de" tabindex="-1">
+    <div class="dau-phieu"><h2 id="phieu-tieu-de">Phiếu trả lời</h2><span id="phieu-dem"></span></div>
+    <div class="luoi-phieu" id="luoi-phieu"></div>
+    <button class="nut-chinh" id="phieu-nop">Nộp bài</button>
+    <button class="nut-chu" id="phieu-dong">Làm tiếp</button>
+  </div>
+</div>
+
+<!-- Hộp hỏi dùng chung (làm tiếp, nộp bài) -->
+<div class="lop-phu" id="hoi" hidden>
+  <div class="tam-hoi" role="dialog" aria-modal="true" aria-labelledby="hoi-tieu-de" tabindex="-1">
+    <h2 id="hoi-tieu-de"></h2>
+    <p id="hoi-noi-dung"></p>
+    <div class="hoi-nut" id="hoi-nut"></div>
+  </div>
+</div>
+
+<div id="fx" aria-hidden="true"><canvas id="phao"></canvas></div>
+<div class="an" id="thong-bao" aria-live="polite"></div>
+
+<script src="dia_hinh.js"></script>
+<script src="xoay_oc.js"></script>
+<script src="mo_khoa.js"></script>
+</body>
+</html>

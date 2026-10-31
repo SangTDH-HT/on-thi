@@ -1,0 +1,148 @@
+/* Bản web: mở khóa bằng mật khẩu riêng của từng người rồi mới chạy app.js (app iOS không dùng tệp này).
+   Bộ câu hỏi du_lieu.bin mã hóa AES-GCM bằng khóa K; khoa.json có một "ô khóa" cho mỗi người: K bọc bằng
+   khóa sinh từ mật khẩu của họ (PBKDF2). Sinh bởi tools/dong_goi_web.py + tools/so_ma.py. */
+(() => {
+  'use strict';
+
+  const $ = (s, g = document) => g.querySelector(s);
+  const kho = {
+    doc(k) { try { return localStorage.getItem('gdqp.' + k); } catch (e) { return null; } },
+    ghi(k, v) {
+      try { if (v == null) localStorage.removeItem('gdqp.' + k); else localStorage.setItem('gdqp.' + k, v); } catch (e) { /* trình duyệt chặn bộ nhớ */ }
+    },
+  };
+  const tu64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const ra64 = u => btoa(String.fromCharCode(...u));
+  const chuan = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');   // bỏ gạch, khoảng trắng; không phân biệt hoa thường
+  const giamDong = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sc = window.crypto && crypto.subtle;
+
+  // Lưu sẵn mọi tệp trong máy: lần sau mở không cần mạng
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { /* chạy tiếp, chỉ mất chế độ ngoại tuyến */ });
+  }
+
+  const tai = ten => fetch(ten).then(r => { if (!r.ok) throw new Error(ten + ' ' + r.status); return r; });
+  let duLieu = null, oKhoa = null;
+  const layDuLieu = () => duLieu || (duLieu = tai('du_lieu.bin').then(r => r.arrayBuffer()).then(b => new Uint8Array(b))
+    .catch(e => { duLieu = null; throw e; }));
+  const layOKhoa = () => oKhoa || (oKhoa = tai('khoa.json').then(r => r.json()).catch(e => { oKhoa = null; throw e; }));
+
+  // Giải mã bộ câu hỏi bằng K (sai K thì AES-GCM báo lỗi xác thực)
+  async function moBang(K) {
+    const du = await layDuLieu();
+    const k = await sc.importKey('raw', K, 'AES-GCM', false, ['decrypt']);
+    const ro = await sc.decrypt({ name: 'AES-GCM', iv: du.subarray(4, 16) }, k, du.subarray(16));
+    return JSON.parse(new TextDecoder().decode(ro));
+  }
+  // Mật khẩu đã chuẩn hóa: 2 ký tự đầu là số hiệu ô khóa, 8 ký tự sau mở ô lấy K
+  async function KTuMa(ma) {
+    const kj = await layOKhoa(), o = kj.o[ma.slice(0, 2)];
+    if (!o) return null;
+    const vat = await sc.importKey('raw', new TextEncoder().encode(ma.slice(2)), 'PBKDF2', false, ['deriveKey']);
+    const k = await sc.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: tu64(o.m), iterations: kj.lap }, vat,
+      { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    try { return new Uint8Array(await sc.decrypt({ name: 'AES-GCM', iv: tu64(o.iv) }, k, tu64(o.g))); } catch (e) { return null; }
+  }
+  // Trả bộ câu hỏi nếu mật khẩu mở được, null nếu sai hoặc đã bị thu hồi; lỗi mạng thì ném ra
+  async function thu(ma) {
+    const kCu = kho.doc('mk_k');
+    if (kCu && kho.doc('mk') === ma) {
+      try { return await moBang(tu64(kCu)); } catch (e) { /* K đã đổi sau một lần thu hồi: mở lại bằng ô khóa */ }
+    }
+    const K = await KTuMa(ma);
+    if (!K) return null;
+    try {
+      const dl = await moBang(K);
+      kho.ghi('mk', ma); kho.ghi('mk_k', ra64(K));
+      return dl;
+    } catch (e) { return null; }
+  }
+
+  function chayApp(dl) {
+    window.GDQP = dl;
+    const s = document.createElement('script');
+    s.src = 'app.js';
+    s.onload = () => document.body.classList.remove('cho-mo');
+    document.body.appendChild(s);
+  }
+
+  const SVG_KHOA = `<svg viewBox="0 0 120 120" aria-hidden="true">
+    <circle cx="60" cy="60" r="47.5" fill="none" stroke="url(#g-vang)" stroke-width="5" stroke-dasharray="1.7 2.2"/>
+    <circle cx="60" cy="60" r="44" fill="url(#g-vang)"/>
+    <circle cx="60" cy="60" r="43.4" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1"/>
+    <circle cx="60" cy="60" r="35" fill="url(#g-men-do)"/>
+    <circle cx="60" cy="60" r="35" fill="none" stroke="#6E4F12" stroke-width="1.4"/>
+    <path class="quai" d="M49 58V50a11 11 0 0 1 22 0v8" fill="none" stroke="url(#g-sao-sang)" stroke-width="5.5" stroke-linecap="round"/>
+    <path d="M45 56h15v28H45a4 4 0 0 1-4-4V60a4 4 0 0 1 4-4z" fill="url(#g-sao-sang)"/>
+    <path d="M60 56h15a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H60z" fill="url(#g-sao-toi)"/>
+    <circle cx="60" cy="67" r="3.6" fill="#6E4F12"/><path d="M58.6 68.5h2.8l.9 7.5h-4.6z" fill="#6E4F12"/></svg>`;
+  const laIOSSafari = /iP(hone|ad|od)/.test(navigator.userAgent) && !navigator.standalone;
+
+  function hienKhoa(loiDau) {
+    const lop = document.createElement('div');
+    lop.className = 'man-khoa';
+    lop.innerHTML = `
+      <div class="nen-khoa" aria-hidden="true">${window.DIA_HINH || ''}</div>
+      <form class="o-khoa" novalidate>
+        <div class="huy-khoa">${SVG_KHOA}</div>
+        <h1>Ôn thi</h1>
+        <p class="mon-khoa">GDQP&amp;AN và Triết học</p>
+        <label for="mk">Mật khẩu của bạn</label>
+        <input id="mk" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+          enterkeyhint="go" maxlength="16" placeholder="xx-xxxx-xxxx" aria-describedby="mk-loi mk-goi-y">
+        <p class="loi-khoa" id="mk-loi" role="alert">${loiDau || ''}</p>
+        <button class="nut-chinh" type="submit">Mở khóa</button>
+        <p class="goi-y-khoa" id="mk-goi-y">Mỗi người một mật khẩu riêng. Chưa có thì hỏi người gửi link cho bạn.</p>
+        ${laIOSSafari ? '<p class="goi-y-khoa them">Muốn dùng như app: bấm nút Chia sẻ, chọn <b>Thêm vào MH chính</b>, rồi mở icon <b>Ôn thi</b> và nhập mật khẩu ở đó.</p>' : ''}
+      </form>`;
+    document.body.appendChild(lop);
+    const o = $('#mk', lop), loi = $('#mk-loi', lop), nut = $('button', lop);
+    if (!giamDong) {
+      $('.huy-khoa svg', lop).animate([{ transform: 'scale(.5) rotate(-35deg)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+        { duration: 900, delay: 150, easing: 'cubic-bezier(.2,1.35,.3,1)', fill: 'backwards' });
+    }
+
+    const baoLoi = t => {
+      loi.textContent = t;
+      lop.classList.remove('sai'); void lop.offsetWidth; lop.classList.add('sai');
+      o.focus();
+    };
+    // Tự chèn gạch theo dạng xx-xxxx-xxxx khi gõ
+    o.addEventListener('input', () => {
+      const c = chuan(o.value).slice(0, 10);
+      o.value = c.length > 6 ? `${c.slice(0, 2)}-${c.slice(2, 6)}-${c.slice(6)}` : c.length > 2 ? `${c.slice(0, 2)}-${c.slice(2)}` : c;
+      lop.classList.remove('sai');
+    });
+    $('form', lop).addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!sc) return baoLoi('Trình duyệt này không mở được app. Dùng Safari hoặc Chrome bản mới.');
+      const ma = chuan(o.value);
+      if (ma.length !== 10) return baoLoi('Mật khẩu có 10 chữ và số, dạng xx-xxxx-xxxx.');
+      nut.disabled = true; nut.textContent = 'Đang mở…'; loi.textContent = '';
+      let dl = null, loiMang = false;
+      try { dl = await thu(ma); } catch (e2) { loiMang = true; }
+      nut.disabled = false; nut.textContent = 'Mở khóa';
+      if (loiMang) return baoLoi('Chưa tải được dữ liệu. Kiểm tra mạng rồi thử lại.');
+      if (!dl) return baoLoi('Sai mật khẩu, hoặc mật khẩu này đã bị thu hồi.');
+      o.blur();
+      chayApp(dl);
+      if (giamDong) { lop.remove(); return; }
+      lop.classList.add('mo');   // quai khóa bật lên, rồi màn khóa tan vào app
+      setTimeout(() => {
+        lop.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(1.04)' }], { duration: 420, easing: 'ease-in', fill: 'forwards' })
+          .onfinish = () => lop.remove();
+      }, 520);
+    });
+  }
+
+  (async () => {
+    const ma = kho.doc('mk');
+    if (!ma || !sc) return hienKhoa();
+    let dl;
+    try { dl = await thu(ma); } catch (e) { return hienKhoa('Chưa tải được dữ liệu. Kiểm tra mạng rồi thử lại.'); }
+    if (dl) return chayApp(dl);
+    kho.ghi('mk', null); kho.ghi('mk_k', null);
+    hienKhoa('Mật khẩu trên máy này đã bị thu hồi. Nhập mật khẩu mới.');
+  })();
+})();
