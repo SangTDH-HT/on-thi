@@ -82,20 +82,52 @@
   function hienKhoa(loiDau) {
     const lop = document.createElement('div');
     lop.className = 'man-khoa';
+    const anh = [
+      ['trang', 'Trang chính: chọn môn, đề thi thử, học theo bài', 'Hai môn, đề thi thử, học theo bài'],
+      ['trietdung', 'Chọn đáp án xong hiện thẻ từ khóa và mẹo nhớ', 'Đúng sai đều có từ khóa, mẹo nhớ'],
+      ['thi', 'Thi thử: tô đáp án, phiếu trả lời', 'Thi thử tô phiếu như thật'],
+      ['trietketthi', 'Kết quả thi: điểm thang 10, xem lại câu sai', 'Chấm điểm, xem lại câu sai'],
+    ];
     lop.innerHTML = `
       <div class="nen-khoa" aria-hidden="true">${window.DIA_HINH || ''}</div>
-      <form class="o-khoa" novalidate>
-        <div class="huy-khoa">${SVG_KHOA}</div>
-        <h1>Ôn thi</h1>
-        <p class="mon-khoa">GDQP&amp;AN và Triết học</p>
-        <label for="mk">Mật khẩu của bạn</label>
-        <input id="mk" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-          enterkeyhint="go" maxlength="16" placeholder="xx-xxxx-xxxx" aria-describedby="mk-loi mk-goi-y">
-        <p class="loi-khoa" id="mk-loi" role="alert">${loiDau || ''}</p>
-        <button class="nut-chinh" type="submit">Mở khóa</button>
-        <p class="goi-y-khoa" id="mk-goi-y">Mỗi người một mật khẩu riêng. Chưa có thì hỏi người gửi link cho bạn.</p>
-        ${laIOSSafari ? '<p class="goi-y-khoa them">Muốn dùng như app: bấm nút Chia sẻ, chọn <b>Thêm vào MH chính</b>, rồi mở icon <b>Ôn thi</b> và nhập mật khẩu ở đó.</p>' : ''}
-      </form>`;
+      <div class="trang-gt">
+        <header class="dau-gt">
+          <div class="huy-khoa">${SVG_KHOA}</div>
+          <div><h1>Ôn thi</h1><p class="mon-khoa">Trắc nghiệm GDQP&amp;AN và Triết học trên điện thoại</p></div>
+        </header>
+        <p class="loi-gt">457 câu ôn tập của hai môn. Chọn đúng hay sai đều hiện từ khóa và mẹo nhớ, thi thử chấm điểm như đề thật.</p>
+        <form class="o-khoa" novalidate>
+          <label for="mk">Mật khẩu của bạn</label>
+          <input id="mk" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+            enterkeyhint="go" maxlength="16" placeholder="xx-xxxx-xxxx" aria-describedby="mk-loi mk-goi-y">
+          <p class="loi-khoa" id="mk-loi" role="alert">${loiDau || ''}</p>
+          <button class="nut-chinh" type="submit">Mở khóa</button>
+          <p class="goi-y-khoa" id="mk-goi-y">Mỗi người một mật khẩu riêng. Chưa có thì hỏi người gửi link cho bạn.</p>
+          ${laIOSSafari ? '<p class="goi-y-khoa them">Muốn dùng như app: bấm nút Chia sẻ, chọn <b>Thêm vào MH chính</b>, rồi mở icon <b>Ôn thi</b> và nhập mật khẩu ở đó.</p>' : ''}
+        </form>
+        <section class="muc-gt" aria-labelledby="gt-lam">
+          <h2 id="gt-lam">App làm được gì</h2>
+          <div class="dai-anh" tabindex="0" aria-label="Ảnh chụp app, vuốt ngang để xem">
+            ${anh.map(([t, alt, cap]) => `<figure><img src="anh/${t}.jpg" alt="${alt}" width="420" height="913" loading="lazy"><figcaption>${cap}</figcaption></figure>`).join('')}
+          </div>
+          <ul class="ds-gt">
+            <li><b>Hai môn riêng.</b> GDQP&amp;AN 230 câu theo 11 bài. Triết học 227 câu theo 7 chủ đề, có riêng bộ câu ôn tập cô phát.</li>
+            <li><b>Học có mẹo.</b> Chọn đáp án là biết đúng sai ngay, kèm từ khóa tô vàng và mẹo nhớ ngắn cho từng câu.</li>
+            <li><b>Thi thử như thật.</b> Đề 20, 30, 50 hoặc 100 câu. Tô phiếu trả lời, nộp bài mới chấm điểm thang 10, xem lại câu sai.</li>
+            <li><b>Không học vẹt vị trí.</b> Câu hỏi và đáp án xáo lại mỗi lần làm.</li>
+            <li><b>Biết mình thuộc tới đâu.</b> Huy hiệu tiến độ từng bài, đếm số câu đã thuộc, luyện lại riêng các câu sai.</li>
+            <li><b>Dùng như app, không cần mạng.</b> Thêm vào màn hình chính trên iPhone hoặc Android; sau lần mở đầu chạy cả khi mất mạng.</li>
+          </ul>
+        </section>
+        <section class="muc-gt" aria-labelledby="gt-cai">
+          <h2 id="gt-cai">Cài lên điện thoại</h2>
+          <ol class="buoc-gt">
+            <li><b>iPhone:</b> mở link bằng Safari, bấm nút Chia sẻ, chọn <b>Thêm vào MH chính</b>. <b>Android:</b> mở bằng Chrome, menu ⋮, chọn <b>Thêm vào màn hình chính</b>.</li>
+            <li>Mở icon <b>Ôn thi</b> vừa thêm trên màn hình chính.</li>
+            <li>Nhập mật khẩu một lần, máy sẽ nhớ. Không cần tài khoản.</li>
+          </ol>
+        </section>
+      </div>`;
     document.body.appendChild(lop);
     const o = $('#mk', lop), loi = $('#mk-loi', lop), nut = $('button', lop);
     if (!giamDong) {
