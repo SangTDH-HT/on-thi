@@ -1,23 +1,12 @@
-/* Sinh tu tools/dong_goi_web.py: luu san moi tep cua ban web de mo khong can mang.
-   Ten bo nho doi theo noi dung; ban moi duoc tai ve o lan mo sau. */
-const BAN = 'on-thi-ed42eaafe1e7';
-const TEP = ["./", "anh/thi.jpg", "anh/trang.jpg", "anh/trietdung.jpg", "anh/trietketthi.jpg", "app.css", "app.js", "cau_hinh.js", "dia_hinh.js", "du_lieu.bin", "fonts/fonts.css", "fonts/saira-latin-ext.woff2", "fonts/saira-latin.woff2", "fonts/saira-stencil-one-latin-ext.woff2", "fonts/saira-stencil-one-latin.woff2", "fonts/saira-stencil-one-vietnamese.woff2", "fonts/saira-vietnamese.woff2", "icon/icon-180.png", "icon/icon-192.png", "icon/icon-512.png", "index.html", "khoa.json", "manifest.webmanifest", "mo_khoa.css", "mo_khoa.js", "xoay_oc.js"];
+/* App Ôn thi tạm ngừng để nâng cấp (01/11/2026). Máy nào còn bản cũ: trình duyệt tải tệp này thay sw.js cũ, xóa hết
+   bản lưu ngoại tuyến, tự gỡ, rồi mở lại trang để trang thông báo xóa nốt mật khẩu và khóa dữ liệu trong máy.
+   Không có trình xử lý fetch: mọi yêu cầu đi thẳng lên mạng. */
+self.addEventListener('install', () => self.skipWaiting());
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(BAN)
-    .then(c => c.addAll(TEP.map(u => new Request(u, { cache: 'reload' }))))
-    .then(() => self.skipWaiting()));
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys()
-    .then(ds => Promise.all(ds.filter(k => k !== BAN).map(k => caches.delete(k))))
-    .then(() => self.clients.claim()));
-});
-
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
-  e.respondWith(caches.open(BAN)
-    .then(c => c.match(e.request, { ignoreSearch: true }))
-    .then(r => r || fetch(e.request)));
-});
+self.addEventListener('activate', e => e.waitUntil((async () => {
+  for (const k of await caches.keys()) await caches.delete(k);
+  await self.registration.unregister();
+  for (const c of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) {
+    try { await c.navigate(c.url); } catch (err) { /* không chuyển được: lần mở sau tự vào trang báo ngừng */ }
+  }
+})()));
