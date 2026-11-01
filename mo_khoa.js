@@ -105,6 +105,13 @@
           <p class="goi-y-khoa" id="mk-goi-y">Mỗi người một mật khẩu riêng. Chưa có thì hỏi người gửi link cho bạn.</p>
           ${laIOSSafari ? '<p class="goi-y-khoa them">Muốn dùng như app: bấm nút Chia sẻ, chọn <b>Thêm vào MH chính</b>, rồi mở icon <b>Ôn thi</b> và nhập mật khẩu ở đó.</p>' : ''}
         </form>
+        <section class="o-mua" id="o-mua" aria-labelledby="mua-tieu-de" hidden>
+          <h2 id="mua-tieu-de">Chưa có mật khẩu?</h2>
+          <p class="chu-mua">Mua mật khẩu riêng giá <b id="mua-gia"></b>: đăng nhập Gmail, chuyển khoản theo mã QR. Người bán nhận tiền xong, mật khẩu được gửi về Gmail của bạn.</p>
+          <div id="mua-dang-nhap"><div id="nut-google"></div></div>
+          <div id="mua-don" hidden></div>
+          <p class="loi-khoa" id="mua-loi" role="alert"></p>
+        </section>
         <section class="muc-gt" aria-labelledby="gt-lam">
           <h2 id="gt-lam">App làm được gì</h2>
           <div class="dai-anh" tabindex="0" aria-label="Ảnh chụp app, vuốt ngang để xem">
@@ -129,7 +136,8 @@
         </section>
       </div>`;
     document.body.appendChild(lop);
-    const o = $('#mk', lop), loi = $('#mk-loi', lop), nut = $('button', lop);
+    moMua(lop);
+    const o = $('#mk', lop), loi = $('#mk-loi', lop), nut = $('.o-khoa .nut-chinh', lop);
     if (!giamDong) {
       $('.huy-khoa svg', lop).animate([{ transform: 'scale(.5) rotate(-35deg)', opacity: 0 }, { transform: 'none', opacity: 1 }],
         { duration: 900, delay: 150, easing: 'cubic-bezier(.2,1.35,.3,1)', fill: 'backwards' });
@@ -166,6 +174,92 @@
           .onfinish = () => lop.remove();
       }, 520);
     });
+  }
+
+  // ---------- Mua mật khẩu: đăng nhập Google → đơn + mã QR → chờ người bán xác nhận → mật khẩu về Gmail ----------
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const tien = n => Number(n).toLocaleString('vi-VN') + 'đ';
+  function moMua(lop) {
+    const ch = window.CAU_HINH || {};
+    if (!ch.mayChu || !ch.googleClientId) return;   // chưa cài máy chủ bán mã
+    const khu = $('#o-mua', lop), loi = $('#mua-loi', lop), donEl = $('#mua-don', lop), dn = $('#mua-dang-nhap', lop);
+    khu.hidden = false;
+    $('#mua-gia', lop).textContent = tien(ch.gia || 30000);
+    $('#mk-goi-y', lop).textContent = 'Mỗi người một mật khẩu riêng. Chưa có thì mua ngay bên dưới.';
+    const goi = (url, opt) => fetch(url, opt).then(r => r.json());
+    let hen = 0;
+
+    const docDon = () => { try { return JSON.parse(kho.doc('don') || 'null'); } catch (e) { return null; } };
+    const hienDangNhap = () => {
+      dn.hidden = false;
+      if (navigator.standalone || matchMedia('(display-mode: standalone)').matches) {
+        dn.innerHTML = '<p class="chu-mua">Đăng nhập Google không chạy trong app ở màn hình chính. Mở link này bằng Safari hoặc Chrome để mua.</p>';
+        return;
+      }
+      if (window.google && google.accounts) return veNut();
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+      s.onload = veNut;
+      s.onerror = () => { loi.textContent = 'Không tải được nút đăng nhập Google. Kiểm tra mạng rồi mở lại trang.'; };
+      document.head.appendChild(s);
+    };
+    function veNut() {
+      google.accounts.id.initialize({ client_id: ch.googleClientId, callback: r => taoDon(r.credential) });
+      google.accounts.id.renderButton($('#nut-google', lop), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with', locale: 'vi' });
+    }
+    async function taoDon(token) {
+      loi.textContent = '';
+      try {
+        const d = await goi(ch.mayChu, { method: 'POST', body: JSON.stringify({ viec: 'tao_don', token }) });
+        if (!d.ok) throw new Error(d.loi || 'Không tạo được đơn.');
+        kho.ghi('don', JSON.stringify(d));
+        hienDon(d);
+      } catch (e) {
+        loi.textContent = e instanceof TypeError ? 'Chưa kết nối được máy chủ bán mã. Thử lại sau ít phút.' : e.message;
+      }
+    }
+    function hienDon(d) {
+      dn.hidden = true; donEl.hidden = false;
+      donEl.innerHTML = `
+        <p class="chu-mua">Gmail nhận mật khẩu: <b>${esc(d.email)}</b> <button type="button" class="nut-nho" data-doi>Đổi Gmail</button></p>
+        <img class="qr-mua" src="${esc(d.qr)}" alt="Mã QR chuyển ${tien(d.soTien)} vào ${esc(d.nganHang)} ${esc(d.tenTaiKhoan)}, nội dung ${esc(d.noiDung)}">
+        <dl class="ck-mua">
+          <dt>Nhận tiền</dt><dd>${esc(d.nganHang)}, ${esc(d.tenTaiKhoan)}</dd>
+          <dt>Số tiền</dt><dd>${tien(d.soTien)}</dd>
+          <dt>Nội dung</dt><dd><b>${esc(d.noiDung)}</b> <button type="button" class="nut-nho" data-chep="${esc(d.noiDung)}">Chép</button></dd>
+        </dl>
+        <p class="chu-mua">Mở app ngân hàng hoặc MoMo, quét mã QR: số tiền và nội dung đã điền sẵn, đừng sửa nội dung.
+          Chuyển bằng chính điện thoại này thì nhấn giữ mã QR, chọn lưu ảnh, rồi trong app ngân hàng chọn quét QR từ ảnh.</p>
+        <p class="tt-mua" id="tt-mua" role="status">Đang chờ người bán xác nhận đã nhận tiền…</p>`;
+      kiem(d);
+    }
+    async function kiem(d) {
+      clearTimeout(hen);
+      if (!document.body.contains(lop)) return;   // đã mở khóa xong
+      const el = $('#tt-mua', lop);
+      try {
+        const t = await goi(`${ch.mayChu}?viec=trang_thai&don=${encodeURIComponent(d.maDon)}`);
+        if (t.tt === 'da_gui' || t.tt === 'dang_gui') {
+          el.innerHTML = `Đã nhận tiền. Mật khẩu đã gửi về <b>${esc(d.email)}</b>: mở Gmail (xem cả mục Quảng cáo, Thư rác), chép mật khẩu vào ô ở trên. Mật khẩu dùng được sau khoảng 2 phút.`;
+          el.classList.add('xong'); kho.ghi('don', null);
+          return;
+        }
+        if (t.tt === 'loi') { el.textContent = 'Đã nhận tiền nhưng gửi mật khẩu bị trục trặc; người bán sẽ gửi lại cho bạn.'; return; }
+        if (t.tt === 'thu_hoi' || t.ok === false) { kho.ghi('don', null); donEl.hidden = true; hienDangNhap(); return; }
+      } catch (e) { /* mạng chập chờn: lát thử lại */ }
+      hen = setTimeout(() => kiem(d), 12000);
+    }
+    khu.addEventListener('click', e => {
+      const chep = e.target.closest('[data-chep]');
+      if (chep) {
+        const xong = () => { chep.textContent = 'Đã chép'; setTimeout(() => { chep.textContent = 'Chép'; }, 1600); };
+        if (navigator.clipboard) navigator.clipboard.writeText(chep.dataset.chep).then(xong, () => {});
+        return;
+      }
+      if (e.target.closest('[data-doi]')) { clearTimeout(hen); kho.ghi('don', null); donEl.hidden = true; hienDangNhap(); }
+    });
+    const cu = docDon();
+    if (cu) hienDon(cu); else hienDangNhap();
   }
 
   (async () => {

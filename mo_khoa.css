@@ -76,3 +76,23 @@ body.cho-mo .man { visibility: hidden; }   /* khung app trống cho tới khi ap
   margin-top: 12px; padding: 10px 12px; border-radius: 12px; text-align: left; color: var(--kaki);
   background: rgba(217, 170, 61, .12); border: 1px solid rgba(217, 170, 61, .35);
 }
+
+/* Mua mật khẩu: đăng nhập Google, mã QR chuyển khoản, trạng thái đơn */
+.o-mua {
+  margin-top: 14px; padding: 16px; border-radius: 18px;
+  background: rgba(217, 170, 61, .08); border: 1px solid rgba(217, 170, 61, .32);
+}
+.o-mua h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
+.chu-mua { margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--kaki-phu); }
+.chu-mua b { color: var(--kaki); font-weight: 600; }
+#mua-dang-nhap { margin-top: 12px; min-height: 44px; }
+.nut-nho {
+  min-height: 32px; padding: 0 10px; margin-left: 4px; border-radius: 9px; vertical-align: middle;
+  font-size: 13.5px; font-weight: 600; color: var(--kaki); background: rgba(236, 230, 204, .1); border: 1px solid rgba(236, 230, 204, .22);
+}
+.qr-mua { display: block; width: 100%; max-width: 270px; margin: 12px auto 4px; border-radius: 14px; background: #fff; }
+.ck-mua { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 10px 0 0; font-size: 14.5px; }
+.ck-mua dt { color: var(--kaki-phu); }
+.ck-mua dd { margin: 0; color: var(--kaki); word-break: break-word; }
+.tt-mua { margin-top: 12px; padding: 10px 12px; border-radius: 12px; font-size: 14.5px; line-height: 1.5; background: rgba(10, 12, 8, .3); }
+.tt-mua.xong { color: #BFF0D3; background: rgba(92, 201, 142, .14); border: 1px solid rgba(92, 201, 142, .45); }
