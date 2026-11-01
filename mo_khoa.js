@@ -45,18 +45,28 @@
     try { return new Uint8Array(await sc.decrypt({ name: 'AES-GCM', iv: tu64(o.iv) }, k, tu64(o.g))); } catch (e) { return null; }
   }
   // Trả bộ câu hỏi nếu mật khẩu mở được, null nếu sai hoặc đã bị thu hồi; lỗi mạng thì ném ra
+  // Mật khẩu bán qua máy chủ (may_chu/Code.gs) không có ô khóa trong khoa.json: máy chủ kiểm rồi trả K
+  async function KTuMayChu(ma) {
+    const url = (window.CAU_HINH || {}).mayChu;
+    if (!url) return null;
+    const d = await fetch(url, { method: 'POST', body: JSON.stringify({ viec: 'mo_khoa', ma }) }).then(r => r.json());
+    return d.ok && d.khoa ? tu64(d.khoa) : null;
+  }
   async function thu(ma) {
     const kCu = kho.doc('mk_k');
     if (kCu && kho.doc('mk') === ma) {
       try { return await moBang(tu64(kCu)); } catch (e) { /* K đã đổi sau một lần thu hồi: mở lại bằng ô khóa */ }
     }
-    const K = await KTuMa(ma);
-    if (!K) return null;
-    try {
-      const dl = await moBang(K);
-      kho.ghi('mk', ma); kho.ghi('mk_k', ra64(K));
-      return dl;
-    } catch (e) { return null; }
+    for (const lay of [KTuMa, KTuMayChu]) {
+      const K = await lay(ma);
+      if (!K) continue;
+      try {
+        const dl = await moBang(K);
+        kho.ghi('mk', ma); kho.ghi('mk_k', ra64(K));
+        return dl;
+      } catch (e) { /* K này không mở được: thử nguồn sau */ }
+    }
+    return null;
   }
 
   function chayApp(dl) {
@@ -107,8 +117,13 @@
         </form>
         <section class="o-mua" id="o-mua" aria-labelledby="mua-tieu-de" hidden>
           <h2 id="mua-tieu-de">Chưa có mật khẩu?</h2>
-          <p class="chu-mua">Mua mật khẩu riêng giá <b id="mua-gia"></b>: đăng nhập Gmail, chuyển khoản theo mã QR. Người bán nhận tiền xong, mật khẩu được gửi về Gmail của bạn.</p>
-          <div id="mua-dang-nhap"><div id="nut-google"></div></div>
+          <p class="chu-mua">Mua mật khẩu riêng giá <b id="mua-gia"></b>: nhập Gmail, chuyển khoản theo mã QR. Người bán nhận tiền xong, mật khẩu được gửi về Gmail đó.</p>
+          <form id="mua-dang-nhap" class="form-mua" novalidate>
+            <label for="mua-email">Gmail nhận mật khẩu</label>
+            <input id="mua-email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false"
+              enterkeyhint="go" placeholder="tenban@gmail.com" aria-describedby="mua-loi">
+            <button class="nut-phu" type="submit">Tạo mã chuyển khoản</button>
+          </form>
           <div id="mua-don" hidden></div>
           <p class="loi-khoa" id="mua-loi" role="alert"></p>
         </section>
@@ -176,12 +191,12 @@
     });
   }
 
-  // ---------- Mua mật khẩu: đăng nhập Google → đơn + mã QR → chờ người bán xác nhận → mật khẩu về Gmail ----------
+  // ---------- Mua mật khẩu: gõ Gmail → đơn + mã QR → chờ người bán xác nhận → mật khẩu về Gmail ----------
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const tien = n => Number(n).toLocaleString('vi-VN') + 'đ';
   function moMua(lop) {
     const ch = window.CAU_HINH || {};
-    if (!ch.mayChu || !ch.googleClientId) return;   // chưa cài máy chủ bán mã
+    if (!ch.mayChu) return;   // chưa cài máy chủ bán mã
     const khu = $('#o-mua', lop), loi = $('#mua-loi', lop), donEl = $('#mua-don', lop), dn = $('#mua-dang-nhap', lop);
     khu.hidden = false;
     $('#mua-gia', lop).textContent = tien(ch.gia || 30000);
@@ -190,34 +205,22 @@
     let hen = 0;
 
     const docDon = () => { try { return JSON.parse(kho.doc('don') || 'null'); } catch (e) { return null; } };
-    const hienDangNhap = () => {
-      dn.hidden = false;
-      if (navigator.standalone || matchMedia('(display-mode: standalone)').matches) {
-        dn.innerHTML = '<p class="chu-mua">Đăng nhập Google không chạy trong app ở màn hình chính. Mở link này bằng Safari hoặc Chrome để mua.</p>';
-        return;
-      }
-      if (window.google && google.accounts) return veNut();
-      const s = document.createElement('script');
-      s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
-      s.onload = veNut;
-      s.onerror = () => { loi.textContent = 'Không tải được nút đăng nhập Google. Kiểm tra mạng rồi mở lại trang.'; };
-      document.head.appendChild(s);
-    };
-    function veNut() {
-      google.accounts.id.initialize({ client_id: ch.googleClientId, callback: r => taoDon(r.credential) });
-      google.accounts.id.renderButton($('#nut-google', lop), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with', locale: 'vi' });
-    }
-    async function taoDon(token) {
-      loi.textContent = '';
+    const hienDangNhap = () => { dn.hidden = false; };
+    dn.addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = $('#mua-email', lop).value.trim().toLowerCase(), nut = $('button', dn);
+      if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(email)) { loi.textContent = 'Gmail chưa đúng dạng, ví dụ tenban@gmail.com.'; return; }
+      loi.textContent = ''; nut.disabled = true; nut.textContent = 'Đang tạo…';
       try {
-        const d = await goi(ch.mayChu, { method: 'POST', body: JSON.stringify({ viec: 'tao_don', token }) });
+        const d = await goi(ch.mayChu, { method: 'POST', body: JSON.stringify({ viec: 'tao_don', email }) });
         if (!d.ok) throw new Error(d.loi || 'Không tạo được đơn.');
         kho.ghi('don', JSON.stringify(d));
         hienDon(d);
-      } catch (e) {
-        loi.textContent = e instanceof TypeError ? 'Chưa kết nối được máy chủ bán mã. Thử lại sau ít phút.' : e.message;
+      } catch (err) {
+        loi.textContent = err instanceof TypeError ? 'Chưa kết nối được máy chủ bán mã. Thử lại sau ít phút.' : err.message;
       }
-    }
+      nut.disabled = false; nut.textContent = 'Tạo mã chuyển khoản';
+    });
     function hienDon(d) {
       dn.hidden = true; donEl.hidden = false;
       donEl.innerHTML = `
@@ -239,8 +242,8 @@
       const el = $('#tt-mua', lop);
       try {
         const t = await goi(`${ch.mayChu}?viec=trang_thai&don=${encodeURIComponent(d.maDon)}`);
-        if (t.tt === 'da_gui' || t.tt === 'dang_gui') {
-          el.innerHTML = `Đã nhận tiền. Mật khẩu đã gửi về <b>${esc(d.email)}</b>: mở Gmail (xem cả mục Quảng cáo, Thư rác), chép mật khẩu vào ô ở trên. Mật khẩu dùng được sau khoảng 2 phút.`;
+        if (t.tt === 'da_gui') {
+          el.innerHTML = `Đã nhận tiền. Mật khẩu đã gửi về <b>${esc(d.email)}</b>: mở Gmail (xem cả mục Quảng cáo, Thư rác), chép mật khẩu vào ô ở trên.`;
           el.classList.add('xong'); kho.ghi('don', null);
           return;
         }
@@ -256,10 +259,13 @@
         if (navigator.clipboard) navigator.clipboard.writeText(chep.dataset.chep).then(xong, () => {});
         return;
       }
-      if (e.target.closest('[data-doi]')) { clearTimeout(hen); kho.ghi('don', null); donEl.hidden = true; hienDangNhap(); }
+      if (e.target.closest('[data-doi]')) {
+        clearTimeout(hen); kho.ghi('don', null); donEl.hidden = true; hienDangNhap();
+        $('#mua-email', lop).focus();
+      }
     });
     const cu = docDon();
-    if (cu) hienDon(cu); else hienDangNhap();
+    if (cu) { $('#mua-email', lop).value = cu.email; hienDon(cu); } else hienDangNhap();
   }
 
   (async () => {

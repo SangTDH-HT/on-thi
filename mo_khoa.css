@@ -85,7 +85,6 @@ body.cho-mo .man { visibility: hidden; }   /* khung app trống cho tới khi ap
 .o-mua h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
 .chu-mua { margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--kaki-phu); }
 .chu-mua b { color: var(--kaki); font-weight: 600; }
-#mua-dang-nhap { margin-top: 12px; min-height: 44px; }
 .nut-nho {
   min-height: 32px; padding: 0 10px; margin-left: 4px; border-radius: 9px; vertical-align: middle;
   font-size: 13.5px; font-weight: 600; color: var(--kaki); background: rgba(236, 230, 204, .1); border: 1px solid rgba(236, 230, 204, .22);
@@ -96,3 +95,14 @@ body.cho-mo .man { visibility: hidden; }   /* khung app trống cho tới khi ap
 .ck-mua dd { margin: 0; color: var(--kaki); word-break: break-word; }
 .tt-mua { margin-top: 12px; padding: 10px 12px; border-radius: 12px; font-size: 14.5px; line-height: 1.5; background: rgba(10, 12, 8, .3); }
 .tt-mua.xong { color: #BFF0D3; background: rgba(92, 201, 142, .14); border: 1px solid rgba(92, 201, 142, .45); }
+.form-mua { display: flex; flex-direction: column; margin-top: 12px; }
+.form-mua[hidden] { display: none; }
+.form-mua label { margin: 0 2px 8px; font-size: 14.5px; font-weight: 600; }
+.form-mua input {
+  width: 100%; min-height: 50px; padding: 0 14px; border-radius: 14px; margin-bottom: 10px;
+  border: 1px solid var(--vien); background: rgba(10, 12, 8, .38); color: var(--kaki); font: 500 17px var(--font);
+  -webkit-user-select: text; user-select: text; outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.form-mua input::placeholder { color: rgba(236, 230, 204, .3); }
+.form-mua input:focus { border-color: var(--dong); box-shadow: 0 0 0 3px rgba(217, 170, 61, .25); }
+.form-mua .nut-phu:disabled { opacity: .7; }
