@@ -117,7 +117,7 @@
         </form>
         <section class="o-mua" id="o-mua" aria-labelledby="mua-tieu-de" hidden>
           <h2 id="mua-tieu-de">Chưa có mật khẩu?</h2>
-          <p class="chu-mua">Mua mật khẩu riêng giá <b id="mua-gia"></b>: nhập Gmail, chuyển khoản theo mã QR. Người bán nhận tiền xong, mật khẩu được gửi về Gmail đó.</p>
+          <p class="chu-mua">Mua mật khẩu riêng giá <b id="mua-gia"></b>: nhập Gmail, chuyển khoản theo mã QR, mật khẩu được gửi về Gmail đó.</p>
           <form id="mua-dang-nhap" class="form-mua" novalidate>
             <label for="mua-email">Gmail nhận mật khẩu</label>
             <input id="mua-email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false"
@@ -233,16 +233,19 @@
         </dl>
         <p class="chu-mua">Mở app ngân hàng hoặc MoMo, quét mã QR: số tiền và nội dung đã điền sẵn, đừng sửa nội dung.
           Chuyển bằng chính điện thoại này thì nhấn giữ mã QR, chọn lưu ảnh, rồi trong app ngân hàng chọn quét QR từ ảnh.</p>
+        ${d.tuDong ? '<p class="chu-mua">Tiền vào tài khoản là mật khẩu tự gửi về Gmail của bạn, thường trong 1–2 phút. Trang này tự báo khi đã gửi.</p>' : ''}
         <button type="button" class="nut-chinh nut-da-chuyen" data-da-chuyen>Tôi đã chuyển khoản</button>
         <p class="tt-mua" id="tt-mua" role="status" hidden></p>`;
       if (d.daBao) daBao();
       kiem(d);
     }
     function daBao() {   // đã báo người bán: ẩn nút, hiện trạng thái chờ
-      const nut = $('[data-da-chuyen]', lop), el = $('#tt-mua', lop);
+      const nut = $('[data-da-chuyen]', lop), el = $('#tt-mua', lop), d = docDon() || {};
       if (nut) nut.hidden = true;
       el.hidden = false;
-      el.textContent = 'Đã báo người bán. Người bán kiểm tra tiền vào rồi gửi mật khẩu về Gmail của bạn; trang này tự báo khi đã gửi.';
+      el.textContent = d.tuDong
+        ? 'Đang chờ tiền vào tài khoản. Tới nơi là mật khẩu tự gửi về Gmail của bạn; quá 10 phút chưa thấy thì người bán kiểm tra tay giúp bạn.'
+        : 'Đã báo người bán. Người bán kiểm tra tiền vào rồi gửi mật khẩu về Gmail của bạn; trang này tự báo khi đã gửi.';
     }
     async function baoDaChuyen(nut) {
       const d = docDon();
@@ -251,7 +254,8 @@
       try {
         const t = await goi(ch.mayChu, { method: 'POST', body: JSON.stringify({ viec: 'da_chuyen', maDon: d.maDon }) });
         if (!t.ok) throw new Error(t.loi || 'Chưa báo được, thử lại.');
-        d.daBao = true; kho.ghi('don', JSON.stringify(d));
+        d.daBao = true; if ('tuDong' in t) d.tuDong = !!t.tuDong;
+        kho.ghi('don', JSON.stringify(d));
         daBao();
       } catch (e) {
         loi.textContent = e instanceof TypeError ? 'Chưa kết nối được máy chủ bán mã. Thử lại sau ít phút.' : e.message;
