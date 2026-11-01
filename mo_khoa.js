@@ -233,8 +233,30 @@
         </dl>
         <p class="chu-mua">Mở app ngân hàng hoặc MoMo, quét mã QR: số tiền và nội dung đã điền sẵn, đừng sửa nội dung.
           Chuyển bằng chính điện thoại này thì nhấn giữ mã QR, chọn lưu ảnh, rồi trong app ngân hàng chọn quét QR từ ảnh.</p>
-        <p class="tt-mua" id="tt-mua" role="status">Đang chờ người bán xác nhận đã nhận tiền…</p>`;
+        <button type="button" class="nut-chinh nut-da-chuyen" data-da-chuyen>Tôi đã chuyển khoản</button>
+        <p class="tt-mua" id="tt-mua" role="status" hidden></p>`;
+      if (d.daBao) daBao();
       kiem(d);
+    }
+    function daBao() {   // đã báo người bán: ẩn nút, hiện trạng thái chờ
+      const nut = $('[data-da-chuyen]', lop), el = $('#tt-mua', lop);
+      if (nut) nut.hidden = true;
+      el.hidden = false;
+      el.textContent = 'Đã báo người bán. Người bán kiểm tra tiền vào rồi gửi mật khẩu về Gmail của bạn; trang này tự báo khi đã gửi.';
+    }
+    async function baoDaChuyen(nut) {
+      const d = docDon();
+      if (!d) return;
+      nut.disabled = true; nut.textContent = 'Đang báo…'; loi.textContent = '';
+      try {
+        const t = await goi(ch.mayChu, { method: 'POST', body: JSON.stringify({ viec: 'da_chuyen', maDon: d.maDon }) });
+        if (!t.ok) throw new Error(t.loi || 'Chưa báo được, thử lại.');
+        d.daBao = true; kho.ghi('don', JSON.stringify(d));
+        daBao();
+      } catch (e) {
+        loi.textContent = e instanceof TypeError ? 'Chưa kết nối được máy chủ bán mã. Thử lại sau ít phút.' : e.message;
+        nut.disabled = false; nut.textContent = 'Tôi đã chuyển khoản';
+      }
     }
     async function kiem(d) {
       clearTimeout(hen);
@@ -243,16 +265,26 @@
       try {
         const t = await goi(`${ch.mayChu}?viec=trang_thai&don=${encodeURIComponent(d.maDon)}`);
         if (t.tt === 'da_gui') {
+          const nut = $('[data-da-chuyen]', lop);
+          if (nut) nut.hidden = true;
+          el.hidden = false;
           el.innerHTML = `Đã nhận tiền. Mật khẩu đã gửi về <b>${esc(d.email)}</b>: mở Gmail (xem cả mục Quảng cáo, Thư rác), chép mật khẩu vào ô ở trên.`;
           el.classList.add('xong'); kho.ghi('don', null);
           return;
         }
-        if (t.tt === 'loi') { el.textContent = 'Đã nhận tiền nhưng gửi mật khẩu bị trục trặc; người bán sẽ gửi lại cho bạn.'; return; }
+        if (t.tt === 'loi') {
+          daBao();
+          el.textContent = 'Đã nhận tiền nhưng gửi mật khẩu bị trục trặc; người bán sẽ gửi lại cho bạn.';
+          return;
+        }
+        if (t.tt === 'da_chuyen') daBao();   // đã báo từ máy khác hoặc trước khi tải lại trang
         if (t.tt === 'thu_hoi' || t.ok === false) { kho.ghi('don', null); donEl.hidden = true; hienDangNhap(); return; }
       } catch (e) { /* mạng chập chờn: lát thử lại */ }
       hen = setTimeout(() => kiem(d), 12000);
     }
     khu.addEventListener('click', e => {
+      const bao = e.target.closest('[data-da-chuyen]');
+      if (bao) return baoDaChuyen(bao);
       const chep = e.target.closest('[data-chep]');
       if (chep) {
         const xong = () => { chep.textContent = 'Đã chép'; setTimeout(() => { chep.textContent = 'Chép'; }, 1600); };

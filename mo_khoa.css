@@ -106,3 +106,5 @@ body.cho-mo .man { visibility: hidden; }   /* khung app trống cho tới khi ap
 .form-mua input::placeholder { color: rgba(236, 230, 204, .3); }
 .form-mua input:focus { border-color: var(--dong); box-shadow: 0 0 0 3px rgba(217, 170, 61, .25); }
 .form-mua .nut-phu:disabled { opacity: .7; }
+.nut-da-chuyen { margin-top: 14px; }
+.nut-da-chuyen[hidden], .tt-mua[hidden] { display: none; }
