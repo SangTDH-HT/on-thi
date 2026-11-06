@@ -20,6 +20,17 @@
   // Lưu sẵn mọi tệp trong máy: lần sau mở không cần mạng
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { /* chạy tiếp, chỉ mất chế độ ngoại tuyến */ });
+    // Bản lưu sẵn hiện trước, bản mới tải ngầm. Tải xong mà vẫn ở màn khóa, chưa gõ gì thì đổi sang bản mới luôn;
+    // đang làm bài thì để lần mở sau. Lần đầu vào trang (chưa có bản lưu) không cần tải lại.
+    const coBanCu = !!navigator.serviceWorker.controller;
+    let daTaiLai = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      const lop = document.querySelector('.man-khoa');
+      const dangGo = lop && [...lop.querySelectorAll('input')].some(o => o.value || o === document.activeElement);
+      if (!coBanCu || daTaiLai || !lop || dangGo) return;
+      daTaiLai = true;
+      location.reload();
+    });
   }
 
   const tai = ten => fetch(ten).then(r => { if (!r.ok) throw new Error(ten + ' ' + r.status); return r; });
