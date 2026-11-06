@@ -128,6 +128,7 @@
     ['co_luc', 'Bản đồ lực: chấm đỏ và xanh cho vùng mỗi bên kiểm soát', 'Bản đồ lực: vùng mỗi bên kiểm soát'],
     ['co_tc', 'Bảng Thế cờ: bên nào nhỉnh hơn và việc cần chú ý', 'Thế cờ: ai hơn, việc gì cần làm trước'],
     ['co_xem', 'Xem lại ván: đồ thị cán cân và chấm từng nước', 'Xem lại ván, chấm từng nước'],
+    ['co_tranh', 'Kết quả tránh bị chiếu bí: đối phương dọa gì và những nước thoát được, có mũi tên trên bàn', 'Đưa ảnh thế cờ, máy chỉ nước thoát'],
     ['co_the', 'Bài giải thế cờ chiếu bí 2 nước', 'Giải thế cờ chiếu bí 1 tới 5 nước'],
     ['co_mang', 'Đấu qua mạng: tạo phòng, lấy mã, vào phòng', 'Đấu qua mạng bằng mã phòng'],
   ];
@@ -269,6 +270,7 @@
               <li><b>Nhìn ra thế cờ.</b> Bản đồ lực cho thấy vùng mỗi bên kiểm soát, mũi tên chỉ đe dọa, bảng Thế cờ nói bên nào hơn và việc nào cần làm trước.</li>
               <li><b>Xem lại ván.</b> Đồ thị cán cân cả ván, đánh dấu sai lầm, thử lại từ bất kỳ nước nào. Lưu 30 ván gần nhất, có biên bản ký hiệu Việt.</li>
               <li><b>Giải thế cờ.</b> 226 thế chiếu bí 1 tới 5 nước và 90 đòn thắng quân. Có luyện mắt 10 câu, tự bày thế cho máy giải.</li>
+              <li><b>Đưa ảnh thế cờ, máy tính nước.</b> Chọn ảnh chụp màn hình hoặc ảnh bàn cờ, máy đọc ra thế cờ để bạn soát lại, rồi tìm đường chiếu bí trong số nước bạn chọn, hoặc chỉ nước tránh bị chiếu bí. Ảnh chỉ xử lý trong máy, không gửi đi đâu.</li>
               <li><b>Đấu với bạn.</b> Hai người chung một máy, bàn tự xoay theo lượt. Hoặc đấu qua mạng bằng mã phòng 6 ký tự, không cần tài khoản.</li>
               <li><b>Có khí thế bàn cờ thật.</b> Quân gỗ chữ Hán, đổi sang chữ Việt được. Ăn quân, chiếu tướng thì quân đập mạnh, bàn rung, hiện lời khiêu khích, tắt được trong menu.</li>
             </ul>

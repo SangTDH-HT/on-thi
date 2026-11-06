@@ -352,6 +352,41 @@ body[data-mon="co"] #nen::after { display: none; }
 .hinh-quan .quan { left: 33px; top: 33px; }
 .da-giai { color: var(--dung); font-weight: 600; font-size: 14px; white-space: nowrap; }
 .bang-q { flex: none; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px 6px; padding: 5px 8px 1px; --o: 44px; --q: 38px; }
+.bang-q[hidden] { display: none; }
+/* Yêu cầu tính nước: ba nấc và số nước */
+.chon-yc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.chon-yc button, .ds-so button { border: 1px solid rgba(236, 230, 204, .22); background: rgba(236, 230, 204, .05); color: var(--kaki); border-radius: 10px; font-weight: 700; }
+.chon-yc button { min-height: 46px; font-size: 14.5px; padding: 0 3px; }
+.chon-so { display: grid; gap: 5px; margin-top: 9px; }
+.chon-so > span { font-size: 14px; color: var(--kaki-phu); }
+.ds-so { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+.ds-so button { min-height: 44px; font: 400 17px/1 var(--font-so); }
+.chon-yc button[aria-checked="true"], .ds-so button[aria-checked="true"] { color: #1E2616; background: linear-gradient(180deg, #F3CD6E, #B98A26); border-color: #B98A26; }
+.chon-yc + .meo-gd, .chon-so + .meo-gd { margin-top: 9px; margin-bottom: 0; }
+.nuoc-dap { background: rgba(10, 6, 3, .28); color: var(--kaki-phu); }
+.nuoc-thua b { color: #FF9D8E; }
+.nhom-thua { margin-top: 10px; }
+.nhom-thua summary { min-height: 44px; display: flex; align-items: center; font-size: 14.5px; font-weight: 700; cursor: pointer; }
+/* Soát thế đọc từ ảnh: ảnh gốc nhỏ để so, bấm phóng to */
+.soat-anh { display: grid; grid-template-columns: 76px 1fr; gap: 10px; align-items: start; }
+.anh-nho { padding: 0; border: 1px solid rgba(236, 230, 204, .3); border-radius: 8px; overflow: hidden; background: #000; min-height: 76px; }
+.anh-nho img { display: block; width: 100%; height: auto; }
+.soat-anh .chu-hoc { font-size: 15px; }
+.soat-anh .meo-gd { margin: 3px 0 0; }
+.anh-to { display: block; width: 100%; height: auto; max-height: 72vh; object-fit: contain; border-radius: 8px; }
+/* Căn 4 góc lưới trên ảnh */
+.anh-khung { flex: none; display: flex; justify-content: center; padding: 4px 6px; }
+.anh-vung { position: relative; flex: none; touch-action: none; -webkit-user-select: none; user-select: none; }
+.anh-vung canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 4px; }
+.anh-vung #a-luoi { pointer-events: none; }
+.anh-vung canvas.kinh-lup { top: 6px; width: 108px; height: 108px; border-radius: 50%; border: 2px solid #3DE0FF; box-shadow: 0 6px 16px rgba(0, 0, 0, .55); pointer-events: none; }
+.anh-vung canvas.kinh-lup[hidden] { display: none; }
+.goc-keo { position: absolute; left: 0; top: 0; width: 48px; height: 48px; margin: -24px 0 0 -24px; padding: 0; border: 0; background: none; touch-action: none; cursor: grab; }
+.goc-keo i { display: block; width: 22px; height: 22px; margin: 13px; border-radius: 50%; background: rgba(61, 224, 255, .28); border: 2.5px solid #3DE0FF; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, .6); box-sizing: border-box; }
+.goc-keo:active { cursor: grabbing; }
+.goc-keo:focus-visible { outline: none; }
+.goc-keo:focus-visible i { box-shadow: 0 0 0 3px var(--dong); }
+.nut-chu-nho { padding: 0; border: 0; background: none; color: var(--dong-sang); font: inherit; font-weight: 600; text-decoration: underline; min-height: 28px; }
 .o-q { position: relative; height: 42px; border: 0; background: none; border-radius: 10px; padding: 0; }
 .o-q .quan { left: 50%; top: 50%; }
 .o-q[aria-pressed="true"] { background: rgba(217, 170, 61, .28); box-shadow: inset 0 0 0 2px var(--dong); }

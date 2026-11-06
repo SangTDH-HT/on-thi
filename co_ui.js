@@ -142,6 +142,7 @@
       <p class="chu-thich">Thế nào cũng có lời giải đã được máy chứng minh.</p>
       <ul class="ds-bai gon">${nhomThe}
         ${hang('mat', '<span class="bieu-so the" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>', 'Luyện mắt nhìn thế cờ', 'Mười câu nhanh: quân nào bị dọa, ăn được gì, bên nào hơn')}
+        ${hang('anh', '<span class="bieu-so the" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.500" r="1.800"/><path d="M21 16l-5-5-8 8"/></svg></span>', 'Đưa ảnh thế cờ, máy tính nước', 'Ảnh chụp màn hình hay bàn cờ thật: chiếu bí trong mấy nước, hoặc tránh bị chiếu bí')}
         ${hang('bay', '<span class="bieu-so the" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span>', 'Tự bày thế, máy giải', 'Xếp quân như thế gặp ngoài đời, máy tìm đường thắng')}
       </ul>
       <h2 class="nhan-muc">Tra cứu</h2>
@@ -894,29 +895,31 @@
     if (gt === 'lai') moMat(); else { M_ = null; BM = null; CO.veMan(); }
   });
 
-  // ---------- Tự bày thế, máy giải ----------
-  let Y = null, BY = null;
-  function moBay() {
-    Y = { ban: new L.The(L.FEN_DAU), ben: 0, chon: null, kq: null, xemKq: null, dangGiai: false };
-    Y.T = Y.ban;
+  // ---------- Tự bày thế, máy giải. Thế đọc từ ảnh cũng vào đây để soát rồi tính nước ----------
+  let Y = null, BY = null, luotTinh = 0;
+  const THE_TRONG = '9/9/9/9/9/9/9/9/9/9 w';
+  const nutCC = (lam, icon, chu, lop = '', id = '') => `<button class="cc ${lop}" data-bay="${lam}"${id ? ` id="${id}"` : ''}>${icon ? CO.icon(icon) : ''}<span>${chu}</span></button>`;
+  const nutBen = () => `<button class="cc" data-bay="ben" id="y-ben"><i class="dau-ben ben-${Y.ben ? 'den' : 'do'} to"></i><span>${BEN[Y.ben]} đi trước</span></button>`;
+  const banTuThe = fen => new L.The(fen);
+  function moBay(o = {}) {
+    luotTinh++;
+    Y = {
+      ben: o.ben || 0, chon: null, dangTinh: false, buoc: 'soat', yeuCau: 'chieu', soNuoc: 3, coKetQua: false, daSua: !!o.anh,
+      tuAnh: !!o.anh, anh: o.anh || null, loNgo: o.loNgo || [], pv: null,
+    };
+    Y.T = new L.The(o.fen || L.FEN_DAU);
     const bangQ = (mau) => [1, 2, 3, 4, 5, 6, 7].map(t => `<button class="o-q" data-bay-q="${t + mau * 8}" aria-label="Đặt ${PT.TEN[t]} ${BEN[mau]}">${CO.htmlQuan(t + mau * 8)}</button>`).join('');
     $('#man-co').innerHTML = `<div class="co-bay">
       <header class="thanh-tren">
         <button class="nut-ve" data-bay="ve" aria-label="Về trang Cờ tướng">${CO.icon('ve')}</button>
-        <div class="tieu-de"><b>Tự bày thế, máy giải</b><span id="y-phu">Chọn quân rồi chạm ô để đặt</span></div>
+        <div class="tieu-de"><b>${Y.tuAnh ? 'Soát thế cờ từ ảnh' : 'Tự bày thế, máy giải'}</b><span id="y-phu"></span></div>
       </header>
       <div id="y-ban"></div>
-      <div class="bang-q" role="group" aria-label="Chọn quân để đặt">${bangQ(0)}${bangQ(1)}</div>
+      <div class="bang-q" id="y-bang" role="group" aria-label="Chọn quân để đặt">${bangQ(0)}${bangQ(1)}</div>
       <section class="the-hoc" id="y-the" aria-live="polite"></section>
-      <footer class="cong-cu nho">
-        <button class="cc" data-bay="xoaq" id="y-xoa">${CO.icon('tay')}<span>Bỏ quân</span></button>
-        <button class="cc" data-bay="dau">${CO.icon('xoay')}<span>Thế đầu</span></button>
-        <button class="cc" data-bay="trong">${CO.icon('lui')}<span>Xóa hết</span></button>
-        <button class="cc" data-bay="ben" id="y-ben"></button>
-        <button class="cc chinh" data-bay="giai">${CO.icon('goi')}<span>Máy giải</span></button>
-      </footer>
+      <footer class="cong-cu nho" id="y-cc"></footer>
     </div>`;
-    BY = new CO.BanCo({ khiBam: bamBay, choChon: () => false });
+    BY = new CO.BanCo({ khiBam: bamBay, choChon: () => false, lat: !!o.lat });
     BY.khoa = true;
     $('#y-ban').appendChild(BY.el);
     CO.khopBan(BY, 300);
@@ -927,86 +930,283 @@
     Y.T.ben = Y.ben;
     BY.nap(Y.T);
     BY.xoaPhu(); BY.cuoi = 0;
-    $('#y-ben').innerHTML = `<i class="dau-ben ben-${Y.ben ? 'den' : 'do'} to"></i><span>${BEN[Y.ben]} đi trước</span>`;
+    const soat = Y.buoc === 'soat';
+    $('#y-bang').hidden = !soat;
+    if (soat && Y.loNgo.length) BY.veO(Y.loNgo);
     $$('.o-q').forEach(b => b.setAttribute('aria-pressed', +b.dataset.bayQ === Y.chon));
-    const x = $('#y-xoa');
-    if (x) x.setAttribute('aria-pressed', Y.chon === 0);
-    if (!Y.kq) $('#y-the').innerHTML = '<p class="chu-hoc">Chạm quân ở bảng, rồi chạm ô để đặt. Chọn Bỏ quân rồi chạm để xóa. Xếp xong bấm Máy giải.</p>';
+    if (soat) {
+      $('#y-phu').textContent = 'Chọn quân ở bảng rồi chạm ô để đặt';
+      $('#y-cc').innerHTML = nutCC('xoaq', 'tay', 'Bỏ quân', '', 'y-xoa') + (Y.tuAnh ? nutCC('canlai', 'xoay', 'Căn lại') : nutCC('dau', 'xoay', 'Thế đầu'))
+        + nutCC('trong', 'lui', 'Xóa hết') + nutBen() + nutCC('giai', 'goi', 'Tính nước', 'chinh');
+      const x = $('#y-xoa');
+      if (x) x.setAttribute('aria-pressed', Y.chon === 0);
+      vePanelSoat();
+    } else {
+      $('#y-phu').textContent = Y.coKetQua ? 'Chạm vào một nước để xem trên bàn' : 'Chọn yêu cầu rồi bấm Tính nước';
+      $('#y-cc').innerHTML = nutCC('sua', 'lui', 'Sửa thế') + nutBen()
+        + (Y.coKetQua ? nutCC('doiyc', 'goi', 'Yêu cầu khác', 'rong') : nutCC('tinh', 'goi', 'Tính nước', 'chinh rong'));
+      if (!Y.coKetQua) veForm();
+    }
+  }
+  function vePanelSoat() {
+    const the = $('#y-the'), loi = Y.daSua ? PT.kiemThe(banTuThe(Y.T.fen())) : [];
+    let h = '';
+    if (Y.tuAnh) {
+      const so = Y.T.ban.reduce((n, p) => n + (p ? 1 : 0), 0), nl = Y.loNgo.length;
+      h = `<div class="soat-anh">
+        <button class="anh-nho" data-bay="xemanh" aria-label="Phóng to ảnh gốc"><img src="${Y.anh.nho}" alt="Bàn cờ trong ảnh bạn chọn"></button>
+        <div><p class="chu-hoc"><b>Đọc được ${so} quân.</b>${nl ? ` ${nl} quân chưa chắc, có vòng đứt nét.` : ''}</p>
+        <p class="meo-gd">So với ảnh bên cạnh. Quân nào sai thì chọn quân đúng ở bảng rồi chạm vào ô đó.${Y.anh.nghieng ? ' Ảnh chụp nghiêng dễ đọc sai, nhớ soát từng quân.' : ''}</p></div></div>`;
+    } else {
+      h = '<p class="chu-hoc">Chạm quân ở bảng, rồi chạm ô để đặt. Chọn Bỏ quân rồi chạm để xóa. Xếp xong bấm Tính nước.</p>';
+    }
+    if (loi.length) h += `<div class="phan-hoi sai"><b>Thế này chưa hợp lệ:</b><ul>${loi.slice(0, 4).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
+    the.innerHTML = h;
   }
   function bamBay(s) {
-    if (!Y) return;
-    Y.kq = null;
-    const cu = Y.T.ban[s], F = new L.The('9/9/9/9/9/9/9/9/9/9 w');
+    if (!Y || Y.buoc !== 'soat') return;
     if (Y.chon == null) {
-      $('#y-the').innerHTML = '<p class="phan-hoi sai">Chọn một quân ở bảng trước, hoặc chọn Bỏ quân.</p>';
+      $('#y-the').insertAdjacentHTML('afterbegin', '<p class="phan-hoi sai">Chọn một quân ở bảng trước, hoặc chọn Bỏ quân.</p>');
       return;
     }
+    const F = new L.The(THE_TRONG);
     for (let o = 0; o < 90; o++) {
       if (o === s) continue;
       if (Y.T.ban[o]) F.datQuan(o, Y.T.ban[o]);
     }
     if (Y.chon) F.datQuan(s, Y.chon);
-    void cu;
     F.ben = Y.ben;
     Y.T = F;
+    Y.daSua = true;
+    Y.loNgo = Y.loNgo.filter(x => x !== s);
     CO.OT.rung('chon'); CO.OT.phat('dat');
     veBay();
   }
-  async function giaiBay() {
-    if (Y.dangGiai) return;
+  // Soát xong: thế phải hợp lệ mới tính được
+  function sangHoi() {
     Y.T.ben = Y.ben;
-    const fen = Y.T.fen(), loi = PT.kiemThe(new L.The(fen));
+    const fen = Y.T.fen(), loi = PT.kiemThe(banTuThe(fen));
     if (loi.length) {
-      $('#y-the').innerHTML = `<div class="phan-hoi sai"><b>Thế này chưa hợp lệ:</b><ul>${loi.slice(0, 5).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
+      Y.daSua = true;
+      vePanelSoat();
       CO.OT.phat('sai');
       return;
     }
-    const kt = L.ketThuc(new L.The(fen));
+    const kt = L.ketThuc(banTuThe(fen));
     if (kt && kt.thang != null) {
-      $('#y-the').innerHTML = `<p class="phan-hoi dung">Thế này đã xong: ${BEN[kt.thang]} thắng vì ${kt.kieu === 'bi' ? 'chiếu bí' : 'đối phương hết nước'}.</p>`;
+      $('#y-the').innerHTML = `<p class="phan-hoi dung">Thế này đã xong: ${BEN[kt.thang]} thắng vì ${kt.kieu === 'bi' ? 'chiếu bí' : 'đối phương hết nước'}. Đổi bên đi trước hoặc sửa thế.</p>`;
       return;
     }
-    Y.dangGiai = true;
+    Y.buoc = 'hoi'; Y.coKetQua = false;
+    veBay();
+  }
+  function veForm() {
+    const ten = BEN[Y.ben], kia = BEN[1 - Y.ben], n = Y.soNuoc;
+    const mo = { chieu: `${ten} đi trước, tìm đường chiếu bí ${kia} trong tối đa ${n} nước.`, tranh: `${ten} đi trước, tìm nước để ${kia} không ép bí được trong ${n} nước.`, hay: `${ten} đi trước, máy tìm các nước đáng đi nhất.` }[Y.yeuCau];
+    const nut = (k, chu) => `<button role="radio" aria-checked="${Y.yeuCau === k}" data-y-yc="${k}">${chu}</button>`;
+    $('#y-the').innerHTML = `<div class="chon-yc" role="radiogroup" aria-label="Yêu cầu">${nut('chieu', 'Chiếu bí')}${nut('tranh', 'Tránh bị bí')}${nut('hay', 'Nước hay nhất')}</div>
+      ${Y.yeuCau === 'hay' ? '' : `<div class="chon-so"><span id="y-nhan-so">Trong mấy nước</span><div class="ds-so" role="radiogroup" aria-labelledby="y-nhan-so">${[1, 2, 3, 4, 5, 6, 7, 8].map(v => `<button role="radio" aria-checked="${v === n}" data-y-n="${v}">${v}</button>`).join('')}</div></div>`}
+      <p class="meo-gd">${esc(mo)}</p>
+      ${Y.yeuCau !== 'hay' && n >= 5 ? '<p class="meo-gd">Từ 5 nước trở lên máy ưu tiên các đường chiếu liên tục, có thể không kịp xét hết mọi đường trong thời gian cho phép.</p>' : ''}`;
+  }
+  // Viết một đường nước đi: { ky, chu } cho từng nước
+  const dongNuoc = (fen, ds, pv) => {
+    const U = L.dungThe(fen, ds), ra = [];
+    for (const m of pv) { ra.push({ m, ky: PT.ghi(U, m).ky, mo: PT.moTaNuoc(U, m) }); U.diGhi(m); }
+    return ra;
+  };
+  const chuoiKy = ds => ds.map((x, i) => `${i % 2 === 0 ? `${i / 2 + 1}. ` : ''}${x.ky}`).join('  ');
+  const dangTinh = chu => { $('#y-the').innerHTML = `<p class="chu-hoc"><i class="dang-nghi"></i><span id="y-tt">${esc(chu)}</span></p>`; };
+
+  async function tinhNuoc() {
+    if (Y.dangTinh) return;
+    const luot = ++luotTinh, conLuot = () => Y && luot === luotTinh;
+    Y.T.ben = Y.ben;
+    const fen = Y.T.fen(), loi = PT.kiemThe(banTuThe(fen));
+    if (loi.length) {
+      $('#y-the').innerHTML = `<div class="phan-hoi sai"><b>Thế này chưa hợp lệ:</b><ul>${loi.slice(0, 4).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
+      CO.OT.phat('sai');
+      return;
+    }
+    Y.dangTinh = true; Y.pv = null;
+    BY.veMui(null);
+    try {
+      if (Y.yeuCau === 'chieu') await tinhChieu(fen, conLuot);
+      else if (Y.yeuCau === 'tranh') await tinhTranh(fen, conLuot);
+      else await tinhHay(fen, conLuot);
+    } catch (e) {
+      if (conLuot()) $('#y-the').innerHTML = `<p class="phan-hoi sai">Máy tính bị lỗi: ${esc(e.message || e)}. Thử lại nhé.</p>`;
+    }
+    if (!conLuot()) return;
+    Y.dangTinh = false;
+    Y.coKetQua = true;
+    $('#y-phu').textContent = 'Chạm vào một nước để xem trên bàn';
+    $('#y-cc').innerHTML = nutCC('sua', 'lui', 'Sửa thế') + nutBen() + nutCC('doiyc', 'goi', 'Yêu cầu khác', 'rong');
+    $('#y-the').scrollTop = 0;
+  }
+  // Chiếu bí trong N nước: thử đường chiếu liên tục trước (nhanh, đi được sâu), rồi xét đủ mọi nước
+  async function tinhChieu(fen, conLuot) {
+    const n = Y.soNuoc, ten = BEN[Y.ben], kia = BEN[1 - Y.ben];
+    dangTinh(`Máy đang tìm đường chiếu bí trong ${n} nước...`);
+    const lien = await CO.goiMay('giai', { fen, ds: [], n, o: { chiChieu: true, ms: 3000 } });
+    if (!conLuot()) return;
+    let lg = lien, xetHet = false;
+    if (lien.n) {
+      if (lien.n > 1) {   // có đường chiếu liên tục: xem còn đường ngắn hơn có nước êm không
+        const ngan = await CO.goiMay('giai', { fen, ds: [], n: lien.n - 1, o: { ms: 3000 } });
+        if (!conLuot()) return;
+        if (ngan.n) lg = ngan;
+      }
+    } else {
+      dangTinh('Chưa có đường chiếu liên tục. Máy đang xét cả các nước êm...');
+      lg = await CO.goiMay('giai', { fen, ds: [], n, o: { ms: 12000 } });
+      if (!conLuot()) return;
+      xetHet = !lg.n && !lg.het;
+    }
     const the = $('#y-the');
-    the.innerHTML = '<p class="chu-hoc"><i class="dang-nghi"></i>Máy đang tìm đường chiếu bí...</p>';
+    if (lg.n) {
+      Y.pv = lg.pv;
+      const ds = dongNuoc(fen, [], lg.pv);
+      the.innerHTML = `<p class="chu-hoc"><b>${ten} chiếu bí trong ${lg.n} nước.</b></p>
+        <ol class="ds-chon">${ds.map((x, i) => `<li><button class="nuoc-chon ${i % 2 ? 'nuoc-dap' : ''}" data-bay-mui="${x.m}" data-bay-ky="${i}"><b>${i % 2 === 0 ? `${i / 2 + 1}. ${ten}` : kia}: ${esc(x.ky)}</b> ${esc(x.mo.chu)}.</button></li>`).join('')}</ol>
+        ${ds.length > 1 ? `<p class="meo-gd">Đây là đường ${kia} chống được lâu nhất, đi cách khác thì bị bí sớm hơn.</p>` : ''}
+        <button class="nut-phu" data-bay="chay">Xem từng nước trên bàn</button>
+        <button class="nut-phu" data-bay="danh">Đánh với máy từ thế này</button>`;
+      BY.veMui([{ tu: lg.pv[0] & 255, den: lg.pv[0] >> 8, mau: 'goi' }]);
+      CO.OT.phat('dung');
+      return;
+    }
+    the.innerHTML = `${xetHet
+      ? `<p class="chu-hoc"><b>${ten} không có đường chiếu bí trong ${n} nước.</b> Máy đã xét hết mọi nước, ${kia} luôn có cách chống.</p>`
+      : `<p class="chu-hoc"><b>Chưa tìm ra đường chiếu bí trong ${n} nước.</b> Máy ${lien.het ? 'chưa kịp xét hết' : 'đã xét hết'} các đường chiếu liên tục, còn đường có nước êm thì chưa xét hết trong thời gian cho phép.</p>`}
+      ${n < 8 ? `<button class="nut-phu" data-y-tiep="${n + 1}">Thử ${n + 1} nước</button>` : ''}
+      <button class="nut-phu" data-bay="hay">Xem nước đáng đi nhất</button>`;
+  }
+  // Tránh bị bí: với từng nước của mình, đối phương có ép bí được trong N nước không
+  async function tinhTranh(fen, conLuot) {
+    const n = Y.soNuoc, ten = BEN[Y.ben], kia = BEN[1 - Y.ben], T = banTuThe(fen), ds = T.hopLe();
+    const dangChieu = T.biChieu(Y.ben);
+    let doa = null;
+    dangTinh(`Máy đang xem ${kia} dọa gì...`);
+    if (!dangChieu) {
+      // Giả sử mình bỏ lượt: đối phương có bí được không. Chính là mối dọa hiện tại
+      const fen2 = fen.replace(/ [wb]$/, Y.ben ? ' w' : ' b');
+      if (!banTuThe(fen2).biChieu(Y.ben)) {
+        const g = await CO.goiMay('giai', { fen: fen2, ds: [], n, o: { ms: 2000 } });
+        if (!conLuot()) return;
+        if (g.n) doa = { n: g.n, ds: dongNuoc(fen2, [], g.pv) };
+      }
+    }
+    const HAN = 14000, t0 = performance.now(), kq = [];
+    // Xét nước ăn quân, nước chiếu trước cho có kết quả sớm
+    for (let i = 0; i < ds.length; i++) {
+      const m = ds[i];
+      const el = $('#y-tt');
+      if (el) el.textContent = `Máy đang xét nước ${i + 1} trên ${ds.length}...`;
+      const chu = L.nuocChu(m), lien = await CO.goiMay('giai', { fen, ds: [chu], n, o: { chiChieu: true, ms: 200 } });
+      if (!conLuot()) return;
+      let g = lien, chac = true;
+      if (!lien.n) {
+        const con = HAN - (performance.now() - t0), phan = Math.max(60, con / (ds.length - i));
+        g = await CO.goiMay('giai', { fen, ds: [chu], n, o: { ms: phan } });
+        if (!conLuot()) return;
+        chac = !g.het;
+      }
+      kq.push({ m, ky: PT.ghi(T, m).ky, mo: PT.moTaNuoc(T, m), bi: g.n, pv: g.pv || [], chac });
+    }
+    const an = kq.filter(x => !x.bi), thua = kq.filter(x => x.bi).sort((a, b) => b.bi - a.bi);
+    // Xếp các nước an toàn theo đánh giá của máy
+    const xep = [];
+    const loai = thua.map(x => x.m);
+    for (let k = 0; k < Math.min(3, an.length); k++) {
+      const el = $('#y-tt');
+      if (el) el.textContent = 'Máy đang chọn nước tốt nhất trong các nước thoát...';
+      const r = await CO.goiMay('tim', { fen, ds: [], o: { ms: 500, loaiTru: loai.concat(xep.map(x => x.m)) } });
+      if (!conLuot()) return;
+      const x = an.find(v => v.m === r.nuoc);
+      if (!x) break;
+      x.diem = r.diem;
+      xep.push(x);
+    }
+    const conLai = an.filter(x => !xep.includes(x));
+    const moiChieu = m => {   // đối phương còn mấy nước chiếu sau nước này
+      const U = banTuThe(fen);
+      U.di(m);
+      const ra = U.hopLe();
+      let dem = 0;
+      for (const r of ra) { U.di(r); if (U.biChieu(U.ben)) dem++; U.lui(); }
+      return dem;
+    };
+    const dongAn = x => {
+      if (x.mo.bi) return `<li><button class="nuoc-chon" data-bay-mui="${x.m}"><b>${esc(x.ky)}</b> ${esc(x.mo.chu)}.</button></li>`;
+      const c = moiChieu(x.m);
+      const nhan = c ? `${kia} còn ${c} nước chiếu nhưng không ép bí được trong ${n} nước` : `${kia} không chiếu được ở nước sau`;
+      return `<li><button class="nuoc-chon" data-bay-mui="${x.m}"><b>${esc(x.ky)}</b> ${esc(x.mo.chu)}.<small>${esc(x.chac ? nhan : `Chưa thấy bị bí, máy chưa kịp xét hết mọi đường`)}${x.diem != null ? `. ${esc(PT.diemRaChu(Y.ben === 0 ? x.diem : -x.diem))}` : ''}</small></button></li>`;
+    };
+    const dongThua = x => {
+      const d = dongNuoc(fen, [x.m], x.pv);
+      return `<li><button class="nuoc-chon nuoc-thua" data-bay-mui="${x.m}"><b>${esc(x.ky)}</b> bị bí sau ${x.bi} nước<small>${esc(d.map(v => v.ky).join('  '))}</small></button></li>`;
+    };
+    const dau = dangChieu ? `<p class="chu-hoc"><b>${ten} đang bị chiếu.</b></p>`
+      : doa ? `<p class="chu-hoc"><b>${kia} đang dọa chiếu bí sau ${doa.n} nước:</b> ${doa.n === 1 ? `${esc(doa.ds[0].ky)}, ${esc(doa.ds[0].mo.chu.charAt(0).toLowerCase() + doa.ds[0].mo.chu.slice(1))}` : esc(chuoiKy(doa.ds))}.</p>`
+        : `<p class="chu-hoc"><b>${kia} chưa dọa được chiếu bí trong ${n} nước.</b></p>`;
+    const the = $('#y-the');
+    if (an.length) {
+      the.innerHTML = `${dau}<h3>${an.length === ds.length ? `Cả ${ds.length} nước đều không bị bí trong ${n} nước` : `${an.length} trên ${ds.length} nước tránh được bí trong ${n} nước`}</h3>
+        <ol class="ds-chon">${xep.concat(conLai.slice(0, 5 - Math.min(5, xep.length))).map(dongAn).join('')}</ol>
+        ${conLai.length > 5 - Math.min(5, xep.length) ? `<p class="meo-gd">Còn ${conLai.length - (5 - Math.min(5, xep.length))} nước khác cũng không bị bí.</p>` : ''}
+        ${thua.length ? `<details class="nhom-thua"><summary>${thua.length} nước đi vào thế bị bí</summary><ol class="ds-chon">${thua.slice(0, 30).map(dongThua).join('')}</ol></details>` : ''}
+        <button class="nut-phu" data-bay="danh">Đánh với máy từ thế này</button>`;
+      const dauTien = xep[0] || an[0];
+      BY.veMui([{ tu: dauTien.m & 255, den: dauTien.m >> 8, mau: 'goi' }]);
+      CO.OT.phat('dung');
+    } else {
+      const lau = thua[0];
+      the.innerHTML = `${dau}<h3>Không thoát được: nước nào cũng bị bí trong ${n} nước</h3>
+        <p class="meo-gd">Chống được lâu nhất là ${esc(lau.ky)}, bị bí sau ${lau.bi} nước.</p>
+        <ol class="ds-chon">${thua.slice(0, 30).map(dongThua).join('')}</ol>`;
+      BY.veMui([{ tu: lau.m & 255, den: lau.m >> 8, mau: 'goi' }]);
+    }
+  }
+  // Nước hay nhất: đường bí ngắn nếu có, không thì ba nước đáng đi và kế hoạch
+  async function tinhHay(fen, conLuot) {
+    const the = $('#y-the');
+    dangTinh('Máy đang tìm đường chiếu bí...');
     let lg = null;
     try {
       lg = await CO.goiMay('giai', { fen, ds: [], n: 3, o: { ms: 2200 } });
       if (!lg.n) { const dai = await CO.goiMay('giai', { fen, ds: [], n: 8, o: { chiChieu: true, ms: 2600 } }); if (dai.n) lg = dai; }
     } catch (e) { /* đọc thế bên dưới */ }
-    if (!Y) return;
+    if (!conLuot()) return;
     const ten = BEN[Y.ben];
     if (lg && lg.n) {
-      Y.pv = lg.pv; Y.pvi = 0;
-      const U = new L.The(fen), dong = [];
-      lg.pv.forEach(m => { dong.push(PT.ghi(U, m).ky); U.diGhi(m); });
-      the.innerHTML = `<p class="chu-hoc"><b>${ten} thắng trong ${lg.n} nước.</b></p><p class="duong">${dong.map((k, i) => `${i % 2 === 0 ? `${i / 2 + 1}. ` : ''}${k}`).join('  ')}</p>
+      Y.pv = lg.pv;
+      const ds = dongNuoc(fen, [], lg.pv);
+      the.innerHTML = `<p class="chu-hoc"><b>${ten} thắng trong ${lg.n} nước.</b></p><p class="duong">${esc(chuoiKy(ds))}</p>
         <button class="nut-phu" data-bay="chay">Xem từng nước trên bàn</button>
         <button class="nut-phu" data-bay="danh">Đánh với máy từ thế này</button>`;
-    } else {
-      the.innerHTML = '<p class="chu-hoc"><i class="dang-nghi"></i>Chưa thấy đường bí ngay. Máy đang đọc thế cờ...</p>';
-      const ds = await CO.goiMay('nhieu', { fen, ds: [], o: { ms: 1800, soNuoc: 3 } });
-      if (!Y) return;
-      const U = new L.The(fen);
-      const tq = PT.tongQuan(U, ds[0]);
-      const hang_ = ds.map((r, i) => {
-        const g = PT.ghi(U, r.nuoc), d = PT.moTaNuoc(U, r.nuoc), dDo = Y.ben === 0 ? r.diem : -r.diem;
-        return `<li><button class="nuoc-chon" data-bay-mui="${r.nuoc}"><b>${i + 1}. ${esc(g.ky)}</b> ${esc(d.chu)}.<small>${esc(PT.diemRaChu(dDo))}</small></button></li>`;
-      }).join('');
-      the.innerHTML = `<p class="chu-hoc"><b>${esc(tq.chuDiem)}</b></p><p class="meo-gd">${esc(tq.tenGd)}. ${esc(PT.cheoQuan(U))}</p>
-        <h3>Ba nước đáng cân nhắc cho ${ten}</h3><ol class="ds-chon">${hang_}</ol>
-        <h3>Kế hoạch</h3><ul class="ds-ke">${tq.keHoach.map(k => `<li>${esc(k)}</li>`).join('')}</ul>
-        <button class="nut-phu" data-bay="danh">Đánh với máy từ thế này</button>`;
-      if (ds[0]) BY.veMui([{ tu: ds[0].nuoc & 255, den: ds[0].nuoc >> 8, mau: 'goi' }]);
+      return;
     }
-    Y.dangGiai = false;
-    Y.kq = true;
-    the.scrollTop = 0;
+    dangTinh('Chưa thấy đường bí ngay. Máy đang đọc thế cờ...');
+    const ds = await CO.goiMay('nhieu', { fen, ds: [], o: { ms: 1800, soNuoc: 3 } });
+    if (!conLuot()) return;
+    const U = banTuThe(fen);
+    const tq = PT.tongQuan(U, ds[0]);
+    const hang_ = ds.map((r, i) => {
+      const g = PT.ghi(U, r.nuoc), d = PT.moTaNuoc(U, r.nuoc), dDo = Y.ben === 0 ? r.diem : -r.diem;
+      return `<li><button class="nuoc-chon" data-bay-mui="${r.nuoc}"><b>${i + 1}. ${esc(g.ky)}</b> ${esc(d.chu)}.<small>${esc(PT.diemRaChu(dDo))}</small></button></li>`;
+    }).join('');
+    the.innerHTML = `<p class="chu-hoc"><b>${esc(tq.chuDiem)}</b></p><p class="meo-gd">${esc(tq.tenGd)}. ${esc(PT.cheoQuan(U))}</p>
+      <h3>Ba nước đáng cân nhắc cho ${ten}</h3><ol class="ds-chon">${hang_}</ol>
+      <h3>Kế hoạch</h3><ul class="ds-ke">${tq.keHoach.map(k => `<li>${esc(k)}</li>`).join('')}</ul>
+      <button class="nut-phu" data-bay="danh">Đánh với máy từ thế này</button>`;
+    if (ds[0]) BY.veMui([{ tu: ds[0].nuoc & 255, den: ds[0].nuoc >> 8, mau: 'goi' }]);
   }
   async function chayLoiBay() {
     Y.T.ben = Y.ben;
     const fen = Y.T.fen(), U = new L.The(fen);
     BY.nap(U);
+    BY.veMui(null);
     for (const m of Y.pv) {
       if (!Y) return;
       const an = U.ban[m >> 8], d = PT.moTaNuoc(U, m);
@@ -1024,25 +1224,256 @@
     const q = e.target.closest('[data-bay-q]');
     if (q && Y) { Y.chon = +q.dataset.bayQ; veBay(); CO.OT.rung('chon'); return; }
     const mui = e.target.closest('[data-bay-mui]');
-    if (mui && BY) { const m = +mui.dataset.bayMui; BY.veMui([{ tu: m & 255, den: m >> 8, mau: 'goi' }]); return; }
+    if (mui && BY) {
+      const m = +mui.dataset.bayMui;
+      // Đang xem đường bí nhiều nước thì nạp đúng thế trước nước đó để mũi tên có nghĩa
+      const ky = mui.dataset.bayKy;
+      if (ky != null && Y && Y.pv) {
+        const U = new L.The(Y.T.fen());
+        Y.pv.slice(0, +ky).forEach(x => U.diGhi(x));
+        BY.nap(U);
+      }
+      BY.veMui([{ tu: m & 255, den: m >> 8, mau: 'goi' }]);
+      return;
+    }
+    if (!Y) return;
+    const yc = e.target.closest('[data-y-yc]');
+    if (yc) { Y.yeuCau = yc.dataset.yYc; veForm(); CO.OT.rung('nhe'); return; }
+    const so = e.target.closest('[data-y-n]');
+    if (so) { Y.soNuoc = +so.dataset.yN; veForm(); CO.OT.rung('nhe'); return; }
+    const tiep = e.target.closest('[data-y-tiep]');
+    if (tiep) { Y.soNuoc = +tiep.dataset.yTiep; Y.coKetQua = false; tinhNuoc(); return; }
     const b = e.target.closest('[data-bay]');
-    if (!b || !Y) return;
+    if (!b) return;
     const lam = b.dataset.bay;
     CO.OT.rung('nhe');
-    if (lam === 've') { Y = null; BY = null; CO.veMan(); return; }
+    if (lam === 've') { luotTinh++; Y = null; BY = null; A = null; CO.veMan(); return; }
     if (lam === 'xoaq') { Y.chon = 0; veBay(); return; }
-    if (lam === 'dau') { Y.T = new L.The(L.FEN_DAU); Y.ben = 0; Y.kq = null; veBay(); return; }
-    if (lam === 'trong') { Y.T = new L.The('9/9/9/9/9/9/9/9/9/9 w'); Y.kq = null; veBay(); return; }
-    if (lam === 'ben') { Y.ben = 1 - Y.ben; Y.kq = null; veBay(); return; }
-    if (lam === 'giai') { giaiBay(); return; }
+    if (lam === 'dau') { Y.T = new L.The(L.FEN_DAU); Y.ben = 0; Y.daSua = false; veBay(); return; }
+    if (lam === 'trong') { Y.T = new L.The(THE_TRONG); Y.loNgo = []; Y.daSua = true; veBay(); return; }
+    if (lam === 'ben') { luotTinh++; Y.dangTinh = false; Y.ben = 1 - Y.ben; Y.coKetQua = false; Y.pv = null; veBay(); return; }
+    if (lam === 'giai') { sangHoi(); return; }
+    if (lam === 'sua') { luotTinh++; Y.dangTinh = false; Y.buoc = 'soat'; Y.coKetQua = false; Y.pv = null; veBay(); return; }
+    if (lam === 'doiyc') { luotTinh++; Y.dangTinh = false; Y.coKetQua = false; Y.pv = null; BY.nap(Y.T); veBay(); return; }
+    if (lam === 'tinh') { tinhNuoc(); return; }
+    if (lam === 'hay') { Y.yeuCau = 'hay'; tinhNuoc(); return; }
     if (lam === 'chay') { chayLoiBay(); return; }
+    if (lam === 'xemanh') { CO.moTam(`<img class="anh-to" src="${Y.anh.nho}" alt="Bàn cờ trong ảnh bạn chọn"><button class="nut-phu" data-dong-anh>Đóng</button>`, { khiBam: (ev, dong) => { if (ev.target.closest('[data-dong-anh]')) dong(); } }); return; }
+    if (lam === 'canlai') { luotTinh++; Y = null; BY = null; moManAnh(); veCan('Kéo 4 chấm vào 4 góc lưới rồi đọc lại.'); return; }
     if (lam === 'danh') {
       Y.T.ben = Y.ben;
       const fen = Y.T.fen(), ben = Y.ben;
+      luotTinh++;
       Y = null; BY = null;
       CO.moVanTuThe(fen, ben, 5);
     }
   });
+
+  // ---------- Đưa ảnh thế cờ: chọn ảnh, tìm bàn, kéo 4 góc nếu cần, đọc quân rồi sang màn soát ----------
+  let A = null;
+  const CANH_ANH = 1600;
+  function chonAnh() {
+    const cu = $('#co-chon-anh');
+    if (cu) cu.remove();   // lần trước bấm hủy thì ô chọn còn nằm lại
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'co-chon-anh';
+    inp.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none';   // Safari đời cũ không mở được ô chọn đã ẩn hẳn
+    document.body.appendChild(inp);
+    inp.addEventListener('change', () => {
+      const f = inp.files && inp.files[0];
+      inp.remove();
+      if (f) napAnh(f);
+    });
+    inp.click();
+  }
+  const docTep = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => no(r.error); r.readAsDataURL(f); });
+  const giaiAnh = url => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('anh')); i.src = url; });
+  function moManAnh() {
+    luotTinh++;
+    $('#man-co').innerHTML = `<div class="co-bay co-can">
+      <header class="thanh-tren">
+        <button class="nut-ve" data-can="ve" aria-label="Về trang Cờ tướng">${CO.icon('ve')}</button>
+        <div class="tieu-de"><b>Ảnh thế cờ</b><span id="a-phu">Ảnh chỉ xử lý trong máy, không gửi đi đâu</span></div>
+      </header>
+      <div class="anh-khung" id="a-khung"></div>
+      <section class="the-hoc" id="a-the" aria-live="polite"></section>
+      <footer class="cong-cu nho" id="a-cc"></footer>
+    </div>`;
+    CO.moMan();
+  }
+  async function napAnh(f) {
+    moManAnh();
+    $('#a-the').innerHTML = '<p class="chu-hoc"><i class="dang-nghi"></i>Đang mở ảnh...</p>';
+    let img;
+    try { img = await giaiAnh(await docTep(f)); } catch (e) {
+      $('#a-the').innerHTML = '<p class="phan-hoi sai">Không mở được ảnh này. Chọn ảnh JPG hoặc PNG khác.</p>';
+      $('#a-cc').innerHTML = '<button class="cc chinh rong" data-can="khac"><span>Chọn ảnh khác</span></button>';
+      return;
+    }
+    const k = Math.min(1, CANH_ANH / Math.max(img.naturalWidth, img.naturalHeight));
+    const can = document.createElement('canvas');
+    can.width = Math.max(1, Math.round(img.naturalWidth * k)); can.height = Math.max(1, Math.round(img.naturalHeight * k));
+    const g = can.getContext('2d', { willReadFrequently: true });
+    g.fillStyle = '#fff'; g.fillRect(0, 0, can.width, can.height);
+    g.drawImage(img, 0, 0, can.width, can.height);
+    let dl;
+    try { dl = g.getImageData(0, 0, can.width, can.height); } catch (e) {
+      $('#a-the').innerHTML = '<p class="phan-hoi sai">Máy này không đọc được điểm ảnh của ảnh đã chọn. Tự xếp quân bằng tay nhé.</p>';
+      $('#a-cc').innerHTML = '<button class="cc chinh rong" data-can="tay"><span>Tự xếp quân</span></button>';
+      return;
+    }
+    A = { can, a: { w: can.width, h: can.height, d: dl.data }, q: null };
+    veAnhNen();
+    $('#a-the').innerHTML = '<p class="chu-hoc"><i class="dang-nghi"></i>Đang tìm bàn cờ trong ảnh...</p>';
+    await doi(50);
+    const kq = window.CoAnh.timBan(A.a);
+    if (!A) return;
+    const chac = kq.q && (kq.diem >= 0.62 || (kq.diem >= 0.5 && kq.khop >= 0.5));
+    if (kq.q) A.q = kq.q;
+    if (chac) { docTuAnh(true); return; }
+    if (!A.q) {
+      const w = A.a.w, h = A.a.h, le = Math.min(w, h) * 0.12;
+      A.q = [[le, le], [w - le, le], [w - le, h - le], [le, h - le]];
+    }
+    veCan('Chưa nhận ra chắc bàn cờ. Kéo 4 chấm vào 4 góc lưới: chỗ hai đường kẻ ngoài cùng gặp nhau, không phải mép bàn.');
+  }
+  // Vẽ ảnh vừa khung, tính tỉ lệ để đổi tọa độ ảnh <-> màn hình
+  function veAnhNen() {
+    const kh = $('#a-khung');
+    if (!kh || !A) return;
+    const toiDaCao = Math.max(220, innerHeight - CO.leAnToan().reduce((s, v) => s + v, 0) - 250);
+    const W = Math.min(innerWidth - 12, 620), s = Math.min(W / A.a.w, toiDaCao / A.a.h);
+    const rong = Math.round(A.a.w * s), cao = Math.round(A.a.h * s), dpr = Math.min(2, window.devicePixelRatio || 1);
+    A.s = s; A.dpr = dpr;
+    kh.innerHTML = `<div class="anh-vung" id="a-vung" style="width:${rong}px;height:${cao}px">
+      <canvas id="a-nen" width="${Math.round(rong * dpr)}" height="${Math.round(cao * dpr)}"></canvas>
+      <canvas id="a-luoi" width="${Math.round(rong * dpr)}" height="${Math.round(cao * dpr)}"></canvas>
+      <canvas id="a-lup" class="kinh-lup" width="${Math.round(108 * dpr)}" height="${Math.round(108 * dpr)}" hidden></canvas>
+    </div>`;
+    $('#a-nen').getContext('2d').drawImage(A.can, 0, 0, Math.round(rong * dpr), Math.round(cao * dpr));
+  }
+  const TEN_GOC = ['trên trái', 'trên phải', 'dưới phải', 'dưới trái'];
+  function veCan(chu) {
+    if (!A) return;
+    if (!A.q) { const w = A.a.w, h = A.a.h, le = Math.min(w, h) * 0.12; A.q = [[le, le], [w - le, le], [w - le, h - le], [le, h - le]]; }
+    veAnhNen();
+    const vung = $('#a-vung');
+    vung.insertAdjacentHTML('beforeend', A.q.map((_, i) => `<button class="goc-keo" data-goc="${i}" aria-label="Góc ${TEN_GOC[i]} của lưới. Dùng phím mũi tên để dịch"><i></i></button>`).join(''));
+    $('#a-the').innerHTML = `<p class="chu-hoc">${esc(chu)}</p>
+      <p class="meo-gd">Không căn được thì <button class="nut-chu-nho" data-can="tay">tự xếp quân bằng tay</button>.</p>`;
+    $('#a-cc').innerHTML = '<button class="cc rong" data-can="khac"><span>Chọn ảnh khác</span></button><button class="cc chinh rong" data-can="doc"><span>Đọc quân</span></button>';
+    datGoc();
+  }
+  function datGoc() {
+    const c = $('#a-luoi');
+    if (!c || !A) return;
+    const s = A.s, dpr = A.dpr, g = c.getContext('2d');
+    g.clearRect(0, 0, c.width, c.height);
+    const [a, b, cc, d, e, f, h, i] = window.CoAnh.lapH(A.q);
+    const P = (k, r) => { const u = k / 8, v = r / 9, z = h * u + i * v + 1; return [(a * u + b * v + cc) / z * s * dpr, (d * u + e * v + f) / z * s * dpr]; };
+    const ve = (mau, day) => {
+      g.strokeStyle = mau; g.lineWidth = day * dpr;
+      g.beginPath();
+      for (let r = 0; r < 10; r++) { const p0 = P(0, r), p1 = P(8, r); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
+      for (let k = 0; k < 9; k++) { const p0 = P(k, 0), p1 = P(k, 9); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
+      g.stroke();
+    };
+    ve('rgba(0,0,0,.55)', 2.4);
+    ve('#3DE0FF', 1.1);
+    $$('.goc-keo').forEach((nut, n) => { nut.style.transform = `translate(${A.q[n][0] * s}px,${A.q[n][1] * s}px)`; });
+  }
+  function kinhLup(n, xMan) {
+    const l = $('#a-lup');
+    if (!l || !A) return;
+    if (n == null) { l.hidden = true; return; }
+    l.hidden = false;
+    const r = 26, [x, y] = A.q[n], g = l.getContext('2d'), W = l.width;
+    g.fillStyle = '#111'; g.fillRect(0, 0, W, W);
+    g.drawImage(A.can, x - r, y - r, 2 * r, 2 * r, 0, 0, W, W);
+    g.strokeStyle = '#3DE0FF'; g.lineWidth = A.dpr;
+    g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, W); g.moveTo(0, W / 2); g.lineTo(W, W / 2); g.stroke();
+    // Đặt kính phía đối diện ngón tay
+    l.style.left = xMan > $('#a-vung').clientWidth / 2 ? '6px' : '';
+    l.style.right = xMan > $('#a-vung').clientWidth / 2 ? '' : '6px';
+  }
+  let gocDangKeo = null;
+  document.addEventListener('pointerdown', e => {
+    const nut = e.target.closest('.goc-keo');
+    if (!nut || !A) return;
+    e.preventDefault();
+    gocDangKeo = +nut.dataset.goc;
+    try { nut.setPointerCapture(e.pointerId); } catch (x) { /* máy cũ */ }
+    kinhLup(gocDangKeo, A.q[gocDangKeo][0] * A.s);
+  });
+  document.addEventListener('pointermove', e => {
+    if (gocDangKeo == null || !A) return;
+    const v = $('#a-vung');
+    if (!v) return;
+    const r = v.getBoundingClientRect();
+    A.q[gocDangKeo] = [Math.max(0, Math.min(A.a.w - 1, (e.clientX - r.left) / A.s)), Math.max(0, Math.min(A.a.h - 1, (e.clientY - r.top) / A.s))];
+    datGoc();
+    kinhLup(gocDangKeo, e.clientX - r.left);
+  });
+  const thaGoc = () => { if (gocDangKeo != null) { gocDangKeo = null; kinhLup(null); } };
+  document.addEventListener('pointerup', thaGoc);
+  document.addEventListener('pointercancel', thaGoc);
+  document.addEventListener('keydown', e => {
+    const nut = e.target.closest && e.target.closest('.goc-keo');
+    if (!nut || !A) return;
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    const n = +nut.dataset.goc, buoc = 2 / A.s;
+    A.q[n] = [Math.max(0, Math.min(A.a.w - 1, A.q[n][0] + d[0] * buoc)), Math.max(0, Math.min(A.a.h - 1, A.q[n][1] + d[1] * buoc))];
+    datGoc();
+  });
+  // Ảnh nhỏ cắt quanh bàn cờ để so khi soát
+  function catBan() {
+    const q = A.q, xs = q.map(p => p[0]), ys = q.map(p => p[1]), le = (Math.max(...xs) - Math.min(...xs)) / 8 * 0.6;
+    const x0 = Math.max(0, Math.min(...xs) - le), y0 = Math.max(0, Math.min(...ys) - le), x1 = Math.min(A.a.w, Math.max(...xs) + le), y1 = Math.min(A.a.h, Math.max(...ys) + le);
+    const W = Math.min(720, x1 - x0), k = W / (x1 - x0), c = document.createElement('canvas');
+    c.width = Math.round(W); c.height = Math.round((y1 - y0) * k);
+    c.getContext('2d').drawImage(A.can, x0, y0, x1 - x0, y1 - y0, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.82);
+  }
+  async function docTuAnh(tuDong) {
+    const the = $('#a-the');
+    if (the) the.innerHTML = '<p class="chu-hoc"><i class="dang-nghi"></i>Đang đọc từng quân...</p>';
+    await doi(40);
+    if (!A) return;
+    if (!tuDong) A.q = window.CoAnh.chinhGoc(A.a, A.q);
+    const r = window.CoAnh.docQuan(A.a, A.q);
+    let so = 0;
+    for (let i = 0; i < 90; i++) if (r.ban[i]) so++;
+    if (so < 2) {
+      veCan('Chưa đọc được quân nào. Xem lại 4 chấm đã nằm đúng góc lưới chưa.');
+      return;
+    }
+    // Đổi về tọa độ máy cờ (Đỏ ở dưới). Ảnh chụp từ phía Đen thì xoay bàn cho giống ảnh
+    const lat = !r.doDuoi, T = new L.The(THE_TRONG), loNgo = [];
+    for (let i = 0; i < 90; i++) {
+      if (!r.ban[i]) continue;
+      const s = lat ? 89 - i : i;
+      T.datQuan(s, r.ban[i]);
+      if (r.tin[i] < 0.6) loNgo.push(s);
+    }
+    // Mặc định bên ở phía dưới ảnh đi trước; bên đang bị chiếu thì phải tới lượt bên đó
+    let ben = lat ? 1 : 0;
+    if (T.vua[0] >= 0 && T.vua[1] >= 0 && T.biChieu(1 - ben) && !T.biChieu(ben)) ben = 1 - ben;
+    T.ben = ben;
+    moBay({ fen: T.fen(), ben, lat, loNgo, anh: { nho: catBan(), nghieng: !r.chuNhat } });
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-can]');
+    if (!b) return;
+    const lam = b.dataset.can;
+    CO.OT.rung('nhe');
+    if (lam === 've') { A = null; CO.veMan(); return; }
+    if (lam === 'khac') { chonAnh(); return; }
+    if (lam === 'doc') { docTuAnh(false); return; }
+    if (lam === 'tay') { A = null; moBay(); }
+  });
+  addEventListener('resize', () => { if (A && $('.goc-keo')) { const chu = $('#a-the .chu-hoc'); veCan(chu ? chu.textContent : ''); } });
 
   // ---------- Bấm từ trang chính ----------
   document.addEventListener('click', e => {
@@ -1064,6 +1495,7 @@
     } else if (lam === 'mang') hopMang();
     else if (lam === 'mat') moMat();
     else if (lam === 'bay') moBay();
+    else if (lam === 'anh') chonAnh();
     else if (lam === 'tra') hopTra();
     else if (lam === 'tu') hopTu();
     else if (lam === 'ls') hopLs();
@@ -1079,6 +1511,13 @@
     if (kieu === 'cothe') { moThe('b2', 3); return; }
     if (kieu === 'comat') { moMat(); return; }
     if (kieu === 'cobay') { moBay(); return; }
+    if (kieu === 'cotranh') {   // màn kết quả tránh bị chiếu bí, chụp cho trang giới thiệu
+      moBay({ fen: '5kN2/1R6C/b1n1b1nr1/9/9/4cC3/9/4pp3/6p2/3rcK1R1 w', ben: 0 });
+      Y.buoc = 'hoi'; Y.yeuCau = 'tranh'; Y.soNuoc = 3;
+      veBay();
+      tinhNuoc();
+      return;
+    }
     if (kieu === 'comang') { hopMang(); return; }
     if (kieu === 'cotra') { hopTra(); return; }
     if (kieu === 'covanmoi') { CO.hopVanMoi(3); return; }
